@@ -10,7 +10,7 @@ const GROUPS = [
       "One 6 KB script; single-page apps tracked automatically",
       "Server ingest API for mobile apps, back ends, CRM and point-of-sale data",
       "No-code tag manager: clicks, form submits and page rules become events",
-      "Cookieless by default, consent modes for the EU, DNT and GPC honoured",
+      "Cookieless by default, consent modes for the EU, optional DNT and GPC support",
     ],
   },
   {

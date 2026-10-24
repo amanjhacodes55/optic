@@ -4,7 +4,7 @@ import { randomId } from "./visitor";
 
 export const SiteSettings = z.object({
   identity: z.enum(["cookieless", "persistent"]).default("cookieless"),
-  respectDnt: z.boolean().default(true),
+  respectDnt: z.boolean().default(false),
   consent: z.enum(["none", "eu", "always"]).default("none"),
   replay: z
     .object({

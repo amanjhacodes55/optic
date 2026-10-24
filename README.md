@@ -32,8 +32,8 @@ The five capabilities modern analytics platforms are built around, all included:
   with backdated events and cross-device identity (`optic("identify", userId)`).
 - **No-code tag manager**: turn CSS-selector clicks, form submits and page rules into events, or load third-party
   scripts only after consent, without editing the site.
-- **Privacy first**: cookieless by default (a daily-rotating salted hash), consent modes for the EU/UK, Do Not Track and
-  Global Privacy Control honoured, query strings never stored, inputs masked in replays.
+- **Privacy first**: cookieless by default (a daily-rotating salted hash), consent modes for the EU/UK, optional Do Not Track and
+  Global Privacy Control support, query strings never stored, inputs masked in replays.
 
 **2. Traffic and audience**
 - GA4's default channel grouping from UTM tags, click ids and referrers.
