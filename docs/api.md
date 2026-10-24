@@ -95,6 +95,11 @@ Every report is `GET /api/stats/<report>` with the same query parameters:
 | `recording` | `id` | rrweb events and the session's event timeline |
 | `insights` | `metric` | Anomalies, 14-day forecast, contribution analysis, frustration signals, Web Vitals |
 
-Management endpoints, all signed in: `GET/POST /api/sites`, `GET/PATCH/DELETE /api/sites/:id` (`PATCH` with
+Reports require a session cookie for your own sites; public sites (the demo) can be read without one. Management
+endpoints, which need you to own the site: `GET/POST /api/sites`, `GET/PATCH/DELETE /api/sites/:id` (`PATCH` with
 `{"rotateKey": true}` rotates the API key), and `GET/POST/DELETE /api/sites/:id/{goals|funnels|tags}` (`DELETE` takes
-`?item=<id>`). Sign in with `POST /api/auth {"password": "…"}`, sign out with `DELETE /api/auth`.
+`?item=<id>`).
+
+Accounts: `POST /api/auth/signup {"name", "email", "password"}`, `POST /api/auth/login {"email", "password"}`,
+`POST /api/auth/logout`, `GET /api/auth/me` (current user or `null`), `PATCH /api/auth/account {"name"}` or
+`{"currentPassword", "newPassword"}`. Sign-up and login set an HttpOnly session cookie valid for 30 days.

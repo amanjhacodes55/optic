@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { BreakdownCard } from "@/components/dashboard/breakdown";
 import { useApi, useDashboard } from "@/components/dashboard/state";
@@ -22,7 +23,7 @@ const METRICS = [
 ] as const;
 
 export default function OverviewPage() {
-  const { qs, compare, site } = useDashboard();
+  const { qs, compare, site, href } = useDashboard();
   const { data, error, loading } = useApi<Overview>(`/api/stats/overview?${qs()}`);
   const [metric, setMetric] = useState<(typeof METRICS)[number]["key"]>("visitors");
   const m = METRICS.find((x) => x.key === metric)!;
@@ -32,6 +33,18 @@ export default function OverviewPage() {
     <>
       <PageHeader title="Overview" description="How many people visited, where they came from and what they did." />
       {error && <ErrorNote message={error} />}
+      {data && data.current.sessions === 0 && data.previous.sessions === 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent bg-accent-wash px-4 py-3 text-sm">
+          <span className="text-accent-ink">
+            <b>No visits yet.</b> Add the tracking code to {site?.domain ?? "your site"}; visits show up in Realtime within seconds.
+          </span>
+          {site?.can_edit && (
+            <Link href={href("/settings")} className="btn btn-primary">
+              Get the tracking code
+            </Link>
+          )}
+        </div>
+      )}
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
         {METRICS.map((k) => (
           <StatTile

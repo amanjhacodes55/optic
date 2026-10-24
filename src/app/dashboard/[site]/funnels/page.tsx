@@ -16,7 +16,7 @@ type Result = {
 };
 
 export default function FunnelsPage() {
-  const { siteId, qs } = useDashboard();
+  const { siteId, qs, site } = useDashboard();
   const { data: funnels, reload } = useApi<FunnelDef[]>(`/api/sites/${siteId}/funnels`);
   const [picked, setPicked] = useState<number | null>(null);
   const [by, setBy] = useState("device");
@@ -40,9 +40,11 @@ export default function FunnelsPage() {
                 ))}
               </select>
             )}
-            <button className="btn" onClick={() => setBuilding((b) => !b)}>
-              <Plus size={15} /> New funnel
-            </button>
+            {site?.can_edit && (
+              <button className="btn" onClick={() => setBuilding((b) => !b)}>
+                <Plus size={15} /> New funnel
+              </button>
+            )}
           </>
         }
       />
@@ -67,23 +69,39 @@ export default function FunnelsPage() {
             title={current.name}
             subtitle={data ? `${pct(data.steps[data.steps.length - 1]?.conversion, 1)} of sessions that started the funnel completed it` : undefined}
             actions={
-              <button
-                className="btn h-8 px-2 text-xs"
-                onClick={async () => {
-                  if (!confirm(`Delete the funnel "${current.name}"?`)) return;
-                  await send(`/api/sites/${siteId}/funnels?item=${current.id}`, "DELETE");
-                  setPicked(null);
-                  reload();
-                }}
-              >
-                <Trash2 size={13} /> Delete
-              </button>
+              !site?.can_edit ? undefined : (
+                <button
+                  className="btn h-8 px-2 text-xs"
+                  onClick={async () => {
+                    if (!confirm(`Delete the funnel "${current.name}"?`)) return;
+                    await send(`/api/sites/${siteId}/funnels?item=${current.id}`, "DELETE");
+                    setPicked(null);
+                    reload();
+                  }}
+                >
+                  <Trash2 size={13} /> Delete
+                </button>
+              )
             }
           >
             {loading && !data ? <Loading height={300} /> : data ? <FunnelChart steps={data.steps} /> : null}
           </Card>
           {data && (
-            <Card title="Completion by segment" actions={<Tabs value={by} onChange={setBy} options={[{ value: "device", label: "Device" }, { value: "channel", label: "Channel" }, { value: "country", label: "Country" }, { value: "browser", label: "Browser" }]} />}>
+            <Card
+              title="Completion by segment"
+              actions={
+                <Tabs
+                  value={by}
+                  onChange={setBy}
+                  options={[
+                    { value: "device", label: "Device" },
+                    { value: "channel", label: "Channel" },
+                    { value: "country", label: "Country" },
+                    { value: "browser", label: "Browser" },
+                  ]}
+                />
+              }
+            >
               <SegmentBars rows={data.segments} dim={by} />
             </Card>
           )}
@@ -211,7 +229,13 @@ function FunnelBuilder({ onSaved }: { onSaved: (id: number) => void }) {
               <option value="page">Page path</option>
               <option value="event">Event name</option>
             </select>
-            <input className="input w-64" placeholder={s.kind === "page" ? "/checkout or /product/*" : "purchase"} value={s.match} onChange={(e) => update(i, { match: e.target.value })} required />
+            <input
+              className="input w-64"
+              placeholder={s.kind === "page" ? "/checkout or /product/*" : "purchase"}
+              value={s.match}
+              onChange={(e) => update(i, { match: e.target.value })}
+              required
+            />
             {steps.length > 2 && (
               <button type="button" className="btn px-2" aria-label="Remove step" onClick={() => setSteps((x) => x.filter((_, j) => j !== i))}>
                 <Trash2 size={14} />

@@ -51,11 +51,14 @@ export default function Home() {
           <a className="btn hidden border-transparent bg-transparent sm:inline-flex" href="https://github.com/amanjhacodes55/optic#readme">
             Docs
           </a>
-          <a className="btn" href="https://github.com/amanjhacodes55/optic">
+          <a className="btn hidden border-transparent bg-transparent sm:inline-flex" href="https://github.com/amanjhacodes55/optic">
             GitHub
           </a>
-          <Link className="btn btn-primary" href="/dashboard/demo">
-            Open the demo
+          <Link className="btn" href="/login">
+            Sign in
+          </Link>
+          <Link className="btn btn-primary" href="/signup">
+            Get started
           </Link>
         </nav>
       </header>
@@ -72,9 +75,9 @@ export default function Home() {
             <Link className="btn btn-primary h-11 px-5 text-base" href="/dashboard/demo">
               Explore the live demo →
             </Link>
-            <a className="btn h-11 px-5 text-base" href="https://github.com/amanjhacodes55/optic#quick-start">
-              Self-host in 2 minutes
-            </a>
+            <Link className="btn h-11 px-5 text-base" href="/signup">
+              Create a free account
+            </Link>
           </div>
         </div>
         <div className="card mt-12 overflow-hidden">

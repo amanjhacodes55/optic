@@ -3,7 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { handleError } from "@/lib/http";
 import { clearGoalsCache } from "@/lib/ingest";
-import { getSite } from "@/lib/sites";
+import { editableSite, viewableSite } from "@/lib/access";
+import { currentUser } from "@/lib/auth";
 
 // CRUD for a site's goals, funnels and tag-manager rules: /api/sites/<id>/<goals|funnels|tags>
 
@@ -26,10 +27,15 @@ function resolve(collection: string): Collection | null {
   return collection in SCHEMAS ? (collection as Collection) : null;
 }
 
-export async function GET(_req: NextRequest, ctx: RouteContext<"/api/sites/[id]/[collection]">) {
+export async function GET(request: NextRequest, ctx: RouteContext<"/api/sites/[id]/[collection]">) {
   const { id, collection } = await ctx.params;
   const c = resolve(collection);
-  if (!c || !getSite(id)) return Response.json({ error: "not found" }, { status: 404 });
+  if (!c) return Response.json({ error: "not found" }, { status: 404 });
+  try {
+    viewableSite(id, currentUser(request));
+  } catch (err) {
+    return handleError(err);
+  }
   const rows = db().prepare(`SELECT * FROM ${c} WHERE site_id = ? ORDER BY id`).all(id) as Record<string, unknown>[];
   return Response.json(c === "funnels" ? rows.map((r) => ({ ...r, steps: JSON.parse(r.steps as string) })) : rows);
 }
@@ -38,7 +44,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/sites/[
   try {
     const { id, collection } = await ctx.params;
     const c = resolve(collection);
-    if (!c || !getSite(id)) return Response.json({ error: "not found" }, { status: 404 });
+    if (!c) return Response.json({ error: "not found" }, { status: 404 });
+    editableSite(id, currentUser(request));
     const body = SCHEMAS[c].parse(await request.json());
     const conn = db();
     let res;
@@ -67,6 +74,11 @@ export async function DELETE(request: NextRequest, ctx: RouteContext<"/api/sites
   const { id, collection } = await ctx.params;
   const c = resolve(collection);
   if (!c) return Response.json({ error: "not found" }, { status: 404 });
+  try {
+    editableSite(id, currentUser(request));
+  } catch (err) {
+    return handleError(err);
+  }
   db().prepare(`DELETE FROM ${c} WHERE site_id = ? AND id = ?`).run(id, Number(request.nextUrl.searchParams.get("item")));
   if (c === "goals") clearGoalsCache(id);
   return new Response(null, { status: 204 });

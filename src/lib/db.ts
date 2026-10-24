@@ -13,8 +13,26 @@ CREATE TABLE IF NOT EXISTS sites (
   timezone    TEXT NOT NULL DEFAULT 'UTC',
   api_key     TEXT NOT NULL,
   settings    TEXT NOT NULL DEFAULT '{}',
-  created_at  INTEGER NOT NULL
+  created_at  INTEGER NOT NULL,
+  owner_id    TEXT,                   -- user who owns the site; NULL for the bundled demo
+  public      INTEGER NOT NULL DEFAULT 0 -- 1: anyone can view the dashboards, read-only
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id            TEXT PRIMARY KEY,
+  email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  name          TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at    INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  token_hash  TEXT PRIMARY KEY,       -- sha256 of the cookie token; the token itself is never stored
+  user_id     TEXT NOT NULL,
+  created_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS auth_sessions_user ON auth_sessions(user_id);
 
 CREATE TABLE IF NOT EXISTS sessions (
   id              TEXT PRIMARY KEY,
@@ -149,10 +167,21 @@ export function db(): Database.Database {
   conn.pragma("journal_mode = WAL");
   conn.pragma("synchronous = NORMAL");
   conn.pragma("foreign_keys = ON");
+  migrate(conn);
   conn.exec(SCHEMA);
+  conn.exec("CREATE INDEX IF NOT EXISTS sites_owner ON sites(owner_id)");
   conn.pragma("optimize"); // refresh planner statistics when they are stale; cheap when they are not
   globalThis.__opticDb = conn;
   return conn;
+}
+
+/** Upgrades databases created before accounts existed. */
+function migrate(conn: Database.Database) {
+  const cols = conn.prepare("PRAGMA table_info(sites)").all() as { name: string }[];
+  if (!cols.length || cols.some((c) => c.name === "owner_id")) return;
+  conn.exec("ALTER TABLE sites ADD COLUMN owner_id TEXT");
+  conn.exec("ALTER TABLE sites ADD COLUMN public INTEGER NOT NULL DEFAULT 0");
+  conn.exec("UPDATE sites SET public = 1 WHERE id = 'demo'");
 }
 
 /** Test helper: swap in a fresh in-memory database. */

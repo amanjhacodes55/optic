@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { send, useApi, useDashboard } from "@/components/dashboard/state";
 import { Card, ErrorNote, PageHeader } from "@/components/ui";
-import type { Site, SiteSettings } from "@/lib/sites";
+import type { ClientSite } from "@/components/dashboard/state";
+import type { SiteSettings } from "@/lib/sites";
+
+type Site = ClientSite;
 
 const noop = () => () => {};
 
@@ -37,21 +40,32 @@ export default function SettingsPage() {
   // Saves return the updated site; prefer that copy until the dashboard reloads the site itself.
   const [saved, setSite] = useState<Site | null>(null);
   const site = saved && saved.id === loaded?.id ? saved : loaded;
-  const origin = useSyncExternalStore(noop, () => window.location.origin, () => "https://your-optic-host");
+  const origin = useSyncExternalStore(
+    noop,
+    () => window.location.origin,
+    () => "https://your-optic-host",
+  );
   if (!site) return null;
 
   const snippet = `<script defer src="${origin}/optic.js" data-site="${site.id}"></script>`;
-  const save = async (patch: Omit<Partial<Site>, "settings"> & { settings?: Partial<SiteSettings>; rotateKey?: boolean }) => setSite((await send(`/api/sites/${siteId}`, "PATCH", patch)) as Site);
+  const save = async (patch: Omit<Partial<Site>, "settings"> & { settings?: Partial<SiteSettings>; rotateKey?: boolean }) =>
+    setSite((await send(`/api/sites/${siteId}`, "PATCH", patch)) as Site);
 
   return (
     <>
       <PageHeader title="Settings" description={`${site.name} · ${site.domain}`} />
       {welcome && (
         <div className="mb-4 rounded-xl border border-accent bg-accent-wash px-4 py-3 text-sm">
-          <b>Site created.</b> Add the snippet below to every page (inside <code>&lt;head&gt;</code>), then open the site: visits show up in Realtime within seconds.
+          <b>Site created.</b> Add the snippet below to every page (inside <code>&lt;head&gt;</code>), then open the site: visits show up in Realtime within
+          seconds.
         </div>
       )}
-      <div className="space-y-4">
+      {!site.can_edit && (
+        <div className="mb-4 rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-ink-2">
+          These are the demo site&apos;s settings, shown read-only. Settings for your own sites can be changed here.
+        </div>
+      )}
+      <fieldset disabled={!site.can_edit} className="min-w-0 space-y-4">
         <Card title="Tracking code" subtitle="One script, about 6 KB gzipped. No cookies by default.">
           <CodeBlock code={snippet} />
           <details className="mt-3 text-sm">
@@ -80,24 +94,50 @@ optic("pageview");                                   // manual pageview (with da
 
         <Card title="Privacy and data collection" subtitle="Defaults are the most private option that still gives useful reports.">
           <div className="divide-y divide-line">
-            <Setting title="Visitor identity" help="Cookieless hashes IP + user agent with a salt that rotates daily: no storage on the device, nothing to consent to in most places, but no retention reports. Persistent stores a random id in localStorage.">
-              <select className="input" value={site.settings.identity} onChange={(e) => save({ settings: { identity: e.target.value as SiteSettings["identity"] } })}>
+            <Setting
+              title="Visitor identity"
+              help="Cookieless hashes IP + user agent with a salt that rotates daily: no storage on the device, nothing to consent to in most places, but no retention reports. Persistent stores a random id in localStorage."
+            >
+              <select
+                className="input"
+                value={site.settings.identity}
+                onChange={(e) => save({ settings: { identity: e.target.value as SiteSettings["identity"] } })}
+              >
                 <option value="cookieless">Cookieless (daily rotating)</option>
                 <option value="persistent">Persistent first-party id</option>
               </select>
             </Setting>
-            <Setting title="Consent" help="Require an explicit optic('consent', true) before anything is sent. 'EU/UK only' decides per visitor from the country header or time zone.">
-              <select className="input" value={site.settings.consent} onChange={(e) => save({ settings: { consent: e.target.value as SiteSettings["consent"] } })}>
+            <Setting
+              title="Consent"
+              help="Require an explicit optic('consent', true) before anything is sent. 'EU/UK only' decides per visitor from the country header or time zone."
+            >
+              <select
+                className="input"
+                value={site.settings.consent}
+                onChange={(e) => save({ settings: { consent: e.target.value as SiteSettings["consent"] } })}
+              >
                 <option value="none">Not required</option>
                 <option value="eu">EU, EEA, UK and Switzerland</option>
                 <option value="always">Everyone</option>
               </select>
             </Setting>
-            <Toggle title="Honour Do Not Track and Global Privacy Control" checked={site.settings.respectDnt} onChange={(v) => save({ settings: { respectDnt: v } })} />
+            <Toggle
+              title="Honour Do Not Track and Global Privacy Control"
+              checked={site.settings.respectDnt}
+              onChange={(v) => save({ settings: { respectDnt: v } })}
+            />
             <Toggle title="Click heatmaps" checked={site.settings.heatmaps} onChange={(v) => save({ settings: { heatmaps: v } })} />
-            <Toggle title="Session recordings" checked={site.settings.replay.enabled} onChange={(v) => save({ settings: { replay: { ...site.settings.replay, enabled: v } } })} />
+            <Toggle
+              title="Session recordings"
+              checked={site.settings.replay.enabled}
+              onChange={(v) => save({ settings: { replay: { ...site.settings.replay, enabled: v } } })}
+            />
             <Setting title="Recording sample rate" help="Share of page loads that are recorded.">
-              <select className="input" value={site.settings.replay.sampleRate} onChange={(e) => save({ settings: { replay: { ...site.settings.replay, sampleRate: Number(e.target.value) } } })}>
+              <select
+                className="input"
+                value={site.settings.replay.sampleRate}
+                onChange={(e) => save({ settings: { replay: { ...site.settings.replay, sampleRate: Number(e.target.value) } } })}
+              >
                 {[1, 0.5, 0.25, 0.1, 0.05, 0.01].map((r) => (
                   <option key={r} value={r}>
                     {r * 100}%
@@ -105,12 +145,28 @@ optic("pageview");                                   // manual pageview (with da
                 ))}
               </select>
             </Setting>
-            <Toggle title="Mask everything typed into inputs in recordings" checked={site.settings.replay.maskInputs} onChange={(v) => save({ settings: { replay: { ...site.settings.replay, maskInputs: v } } })} />
-            <Setting title="Strip URL parameters" help="Removed in the browser before sending. Paths are stored without query strings anyway; UTM tags are read first.">
+            <Toggle
+              title="Mask everything typed into inputs in recordings"
+              checked={site.settings.replay.maskInputs}
+              onChange={(v) => save({ settings: { replay: { ...site.settings.replay, maskInputs: v } } })}
+            />
+            <Setting
+              title="Strip URL parameters"
+              help="Removed in the browser before sending. Paths are stored without query strings anyway; UTM tags are read first."
+            >
               <input
                 className="input w-72"
                 defaultValue={site.settings.stripParams.join(", ")}
-                onBlur={(e) => save({ settings: { stripParams: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) } })}
+                onBlur={(e) =>
+                  save({
+                    settings: {
+                      stripParams: e.target.value
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    },
+                  })
+                }
               />
             </Setting>
           </div>
@@ -118,16 +174,20 @@ optic("pageview");                                   // manual pageview (with da
 
         <TagManager />
 
-        <Card title="Server-side ingestion" subtitle="For mobile apps, back ends, CRMs, point-of-sale and offline conversions.">
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-ink-2">API key</span>
-            <code className="rounded bg-surface-2 px-2 py-1">{site.api_key}</code>
-            <button className="btn h-7 text-xs" onClick={() => confirm("Rotate the key? The old one stops working immediately.") && save({ rotateKey: true })}>
-              Rotate
-            </button>
-          </div>
-          <CodeBlock
-            code={`curl -X POST ${origin}/api/ingest \\
+        {site.can_edit && site.api_key && (
+          <Card title="Server-side ingestion" subtitle="For mobile apps, back ends, CRMs, point-of-sale and offline conversions.">
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-ink-2">API key</span>
+              <code className="rounded bg-surface-2 px-2 py-1">{site.api_key}</code>
+              <button
+                className="btn h-7 text-xs"
+                onClick={() => confirm("Rotate the key? The old one stops working immediately.") && save({ rotateKey: true })}
+              >
+                Rotate
+              </button>
+            </div>
+            <CodeBlock
+              code={`curl -X POST ${origin}/api/ingest \\
   -H "Authorization: Bearer ${site.api_key}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -138,11 +198,12 @@ optic("pageview");                                   // manual pageview (with da
       "props": { "store": "Bandra", "item": "House Espresso" }
     }]
   }'`}
-          />
-        </Card>
+            />
+          </Card>
+        )}
 
-        <DangerZone site={site} />
-      </div>
+        {site.can_edit && <DangerZone site={site} />}
+      </fieldset>
     </>
   );
 }
@@ -230,9 +291,17 @@ function TagManager() {
   const [event, setEvent] = useState("");
   const [consent, setConsent] = useState("analytics");
   const [error, setError] = useState<string | null>(null);
-  const placeholder = { click: "CSS selector, e.g. .buy-button", submit: "Form selector, e.g. #contact", pageview: "Page path, e.g. /thank-you or /blog/*", script: "https://…/pixel.js" }[kind];
+  const placeholder = {
+    click: "CSS selector, e.g. .buy-button",
+    submit: "Form selector, e.g. #contact",
+    pageview: "Page path, e.g. /thank-you or /blog/*",
+    script: "https://…/pixel.js",
+  }[kind];
   return (
-    <Card title="Tag manager" subtitle="Turn clicks, form submits and page visits into events, or load third-party scripts after consent, without editing the site.">
+    <Card
+      title="Tag manager"
+      subtitle="Turn clicks, form submits and page visits into events, or load third-party scripts after consent, without editing the site."
+    >
       <ul className="mb-4 divide-y divide-line text-sm">
         {(tags ?? []).map((t) => (
           <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
@@ -248,7 +317,7 @@ function TagManager() {
               <span className="ml-2 text-xs text-muted">consent: {t.consent}</span>
             </span>
             <button
-              className="text-muted hover:text-ink"
+              className="text-muted hover:text-ink disabled:hidden"
               aria-label="Delete tag"
               onClick={async () => {
                 await send(`/api/sites/${siteId}/tags?item=${t.id}`, "DELETE");
@@ -283,7 +352,9 @@ function TagManager() {
           <option value="script">Load script</option>
         </select>
         <input className="input w-72" required placeholder={placeholder} value={match} onChange={(e) => setMatch(e.target.value)} aria-label="Match" />
-        {kind !== "script" && <input className="input w-44" required placeholder="event_name" value={event} onChange={(e) => setEvent(e.target.value)} aria-label="Event name" />}
+        {kind !== "script" && (
+          <input className="input w-44" required placeholder="event_name" value={event} onChange={(e) => setEvent(e.target.value)} aria-label="Event name" />
+        )}
         <select className="input" value={consent} onChange={(e) => setConsent(e.target.value)} aria-label="Consent category">
           <option value="necessary">Necessary</option>
           <option value="analytics">Analytics</option>

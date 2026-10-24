@@ -6,7 +6,18 @@ import { send, useApi, useDashboard } from "@/components/dashboard/state";
 import { Card, DataTable, ErrorNote, Loading, PageHeader, type Column } from "@/components/ui";
 import { money, num, pct } from "@/lib/format";
 
-type Goal = { id: number; name: string; kind: "event" | "page"; match: string; value: number; completions: number; sessions: number; visitors: number; rate: number; worth: number };
+type Goal = {
+  id: number;
+  name: string;
+  kind: "event" | "page";
+  match: string;
+  value: number;
+  completions: number;
+  sessions: number;
+  visitors: number;
+  rate: number;
+  worth: number;
+};
 
 export default function GoalsPage() {
   const { qs, siteId, site } = useDashboard();
@@ -15,7 +26,17 @@ export default function GoalsPage() {
   const cur = site?.settings.currency;
   const columns: Column<Goal>[] = [
     { key: "name", label: "Goal", render: (g) => <span className="font-medium">{g.name}</span>, value: (g) => g.name },
-    { key: "match", label: "Trigger", render: (g) => <span className="text-ink-2">{g.kind === "event" ? "Event" : "Page"} <code>{g.match}</code></span>, value: (g) => g.match, align: "left" },
+    {
+      key: "match",
+      label: "Trigger",
+      render: (g) => (
+        <span className="text-ink-2">
+          {g.kind === "event" ? "Event" : "Page"} <code>{g.match}</code>
+        </span>
+      ),
+      value: (g) => g.match,
+      align: "left",
+    },
     { key: "completions", label: "Completions", format: num },
     { key: "visitors", label: "Visitors", format: num },
     { key: "rate", label: "Conv. rate", format: (n) => pct(n, 2) },
@@ -23,20 +44,21 @@ export default function GoalsPage() {
     {
       key: "id",
       label: "",
-      render: (g) => (
-        <button
-          className="text-muted hover:text-ink"
-          aria-label={`Delete goal ${g.name}`}
-          onClick={async (e) => {
-            e.stopPropagation();
-            if (!confirm(`Delete the goal "${g.name}"?`)) return;
-            await send(`/api/sites/${siteId}/goals?item=${g.id}`, "DELETE");
-            reload();
-          }}
-        >
-          <Trash2 size={14} />
-        </button>
-      ),
+      render: (g) =>
+        !site?.can_edit ? null : (
+          <button
+            className="text-muted hover:text-ink"
+            aria-label={`Delete goal ${g.name}`}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (!confirm(`Delete the goal "${g.name}"?`)) return;
+              await send(`/api/sites/${siteId}/goals?item=${g.id}`, "DELETE");
+              reload();
+            }}
+          >
+            <Trash2 size={14} />
+          </button>
+        ),
       value: () => 0,
     },
   ];
@@ -46,9 +68,11 @@ export default function GoalsPage() {
         title="Goals"
         description="Conversions you care about: an event (macro: purchase, micro: add_to_cart) or reaching a page. Goals count from the moment they are created."
         actions={
-          <button className="btn" onClick={() => setAdding((a) => !a)}>
-            <Plus size={15} /> New goal
-          </button>
+          site?.can_edit ? (
+            <button className="btn" onClick={() => setAdding((a) => !a)}>
+              <Plus size={15} /> New goal
+            </button>
+          ) : undefined
         }
       />
       {adding && (
@@ -60,7 +84,9 @@ export default function GoalsPage() {
         />
       )}
       <Card pad={false}>
-        <div className="py-2">{loading && !data ? <Loading /> : <DataTable rows={data ?? []} columns={columns} initialSort="completions" exportName="optic-goals" />}</div>
+        <div className="py-2">
+          {loading && !data ? <Loading /> : <DataTable rows={data ?? []} columns={columns} initialSort="completions" exportName="optic-goals" />}
+        </div>
       </Card>
     </>
   );
@@ -100,7 +126,13 @@ function GoalForm({ onSaved }: { onSaved: () => void }) {
         </label>
         <label className="flex flex-col gap-1">
           <span className="label">{kind === "event" ? "Event name" : "Page path (* allowed)"}</span>
-          <input className="input w-56" required value={match} onChange={(e) => setMatch(e.target.value)} placeholder={kind === "event" ? "signup" : "/thank-you"} />
+          <input
+            className="input w-56"
+            required
+            value={match}
+            onChange={(e) => setMatch(e.target.value)}
+            placeholder={kind === "event" ? "signup" : "/thank-you"}
+          />
         </label>
         <label className="flex flex-col gap-1">
           <span className="label">Value per completion</span>

@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { LoginForm } from "./form";
+import { AuthLayout, LoginForm } from "@/components/auth-form";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <AuthLayout>
       <Suspense>
         <LoginForm />
       </Suspense>
-    </div>
+    </AuthLayout>
   );
 }

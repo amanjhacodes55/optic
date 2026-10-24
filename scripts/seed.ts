@@ -285,6 +285,7 @@ function setupSite() {
     name: "Northwind Coffee (demo)",
     domain: DOMAIN,
     timezone: TIMEZONE,
+    public: true, // read-only for everyone, owned by nobody
     settings: { identity: "persistent", currency: "USD", consent: "none", respectDnt: false, replay: { enabled: true, sampleRate: 1, maskInputs: true } },
   });
   const conn = db();

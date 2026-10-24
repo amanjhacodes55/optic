@@ -7,7 +7,8 @@ import {
   Menu, Monitor, Moon, PlayCircle, Radio, Settings, Sparkles, Sun, Target, Users, X, Zap, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { Site } from "@/lib/sites";
+import { UserMenu, useSession } from "../user-menu";
+import type { ClientSite } from "./state";
 import { DashboardProvider, useApi, useDashboard } from "./state";
 
 export const DIM_LABELS: Record<string, string> = {
@@ -58,14 +59,31 @@ const NAV: { group: string; items: { path: string; label: string; icon: LucideIc
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const { site: siteId } = useParams<{ site: string }>();
-  const { data: site, error } = useApi<Site>(`/api/sites/${siteId}`);
+  const { data: site, error } = useApi<ClientSite>(`/api/sites/${siteId}`);
+  const pathname = usePathname();
   if (error) {
+    const signIn = /sign in/i.test(error);
     return (
-      <div className="mx-auto max-w-md p-10 text-center">
-        <p className="font-medium">Site not found</p>
-        <Link className="text-accent-ink hover:underline" href="/dashboard">
-          Back to your sites
-        </Link>
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="card w-full max-w-sm p-6 text-center">
+          <Logo size={30} />
+          <p className="mt-4 font-semibold">{signIn ? "Sign in to view this site" : "Site not found"}</p>
+          <p className="mt-1 text-sm text-ink-2">{signIn ? "This dashboard belongs to an Optic account." : "It may have been deleted, or it belongs to another account."}</p>
+          <div className="mt-5 flex flex-col gap-2">
+            {signIn ? (
+              <Link className="btn btn-primary justify-center" href={`/login?next=${encodeURIComponent(pathname)}`}>
+                Sign in
+              </Link>
+            ) : (
+              <Link className="btn btn-primary justify-center" href="/dashboard">
+                Back to your sites
+              </Link>
+            )}
+            <Link className="btn justify-center" href="/dashboard/demo">
+              Explore the demo
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -92,6 +110,7 @@ function Frame({ children }: { children: ReactNode }) {
       {open && <button aria-label="Close menu" className="fixed inset-0 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} />}
       <div className="min-w-0 flex-1">
         <TopBar onMenu={() => setOpen(true)} />
+        <ReadOnlyBanner />
         <main className="mx-auto max-w-[1400px] px-4 pb-16 pt-5 sm:px-6">{children}</main>
       </div>
     </div>
@@ -140,18 +159,37 @@ function Sidebar() {
   );
 }
 
-export function Logo({ size = 22 }: { size?: number }) {
+function ReadOnlyBanner() {
+  const { site } = useDashboard();
+  const { user, loading } = useSession();
+  if (!site || site.can_edit || loading) return null;
+  return (
+    <div className="border-b border-line bg-accent-wash">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm sm:px-6">
+        <span className="text-accent-ink">
+          <b>Read-only demo.</b> You are looking at sample data for a fictional coffee shop.
+        </span>
+        <Link href={user ? "/dashboard?new=1" : "/signup"} className="font-medium text-accent-ink underline underline-offset-2">
+          {user ? "Add your own site →" : "Create a free account to track your own site →"}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export function Logo({ size = 22, inverted = false }: { size?: number; inverted?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-      <rect width="32" height="32" rx="9" fill="var(--ink)" />
-      <circle cx="16" cy="16" r="8.5" fill="none" stroke="var(--plane)" strokeWidth="2.5" />
+      <rect width="32" height="32" rx="9" fill={inverted ? "#f0efec" : "var(--ink)"} />
+      <circle cx="16" cy="16" r="8.5" fill="none" stroke={inverted ? "#0d0d0d" : "var(--plane)"} strokeWidth="2.5" />
       <circle cx="16" cy="16" r="3.2" fill="#3987e5" />
     </svg>
   );
 }
 
-function SiteSwitcher({ current }: { current: Site | null }) {
-  const { data: sites } = useApi<Site[]>("/api/sites");
+function SiteSwitcher({ current }: { current: ClientSite | null }) {
+  const { data: sites } = useApi<ClientSite[]>("/api/sites");
+  const { user } = useSession();
   const router = useRouter();
   return (
     <div className="px-3 pt-3">
@@ -159,7 +197,7 @@ function SiteSwitcher({ current }: { current: Site | null }) {
         aria-label="Site"
         className="input w-full font-medium"
         value={current?.id ?? ""}
-        onChange={(e) => (e.target.value === "__new" ? router.push("/dashboard?new=1") : router.push(`/dashboard/${e.target.value}`))}
+        onChange={(e) => (e.target.value === "__new" ? router.push(user ? "/dashboard?new=1" : "/signup") : router.push(`/dashboard/${e.target.value}`))}
       >
         {!current && <option value="">Loading…</option>}
         {(sites ?? (current ? [current] : [])).map((s) => (
@@ -220,6 +258,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         </label>
         <DateRange />
         <ThemeToggle />
+        <UserMenu />
       </div>
     </div>
   );

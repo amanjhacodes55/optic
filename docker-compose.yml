@@ -5,8 +5,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      OPTIC_PASSWORD: ${OPTIC_PASSWORD:-change-me}
-      OPTIC_SECRET: ${OPTIC_SECRET:-}
+      # Set to false after creating your account to stop strangers signing up.
+      OPTIC_ALLOW_SIGNUP: ${OPTIC_ALLOW_SIGNUP:-true}
       # Set to 1 to load the Northwind Coffee demo data on first start.
       OPTIC_SEED_DEMO: ${OPTIC_SEED_DEMO:-0}
     volumes:

@@ -4,7 +4,8 @@ import { handleError } from "@/lib/http";
 import { parseContext, QueryError, SESSION_DIMENSIONS, type SessionDimension } from "@/lib/query/context";
 import { insights } from "@/lib/query/insights";
 import * as r from "@/lib/query/reports";
-import { getSite } from "@/lib/sites";
+import { viewableSite } from "@/lib/access";
+import { currentUser } from "@/lib/auth";
 
 // One endpoint per report: GET /api/stats/<report>?site=…&from=YYYY-MM-DD&to=YYYY-MM-DD&f=dim:value
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/stats/[report]">) {
@@ -12,11 +13,8 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/stats/[r
     const { report } = await ctx.params;
     const params = request.nextUrl.searchParams;
 
-    if (report === "realtime") {
-      const site = getSite(params.get("site") ?? "");
-      if (!site) throw new QueryError("unknown site", 404);
-      return Response.json(r.realtime(site.id));
-    }
+    const site = viewableSite(params.get("site") ?? "", currentUser(request));
+    if (report === "realtime") return Response.json(r.realtime(site.id));
 
     const q = parseContext(params);
     switch (report) {

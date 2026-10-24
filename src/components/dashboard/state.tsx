@@ -4,6 +4,9 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Site } from "@/lib/sites";
 
+/** A site as the API returns it: the API key is only present for the owner. */
+export type ClientSite = Omit<Site, "api_key"> & { api_key: string | null; can_edit: boolean };
+
 // Dashboard state lives in the URL (?from=&to=&f=dim:value&compare=1), so every view can be
 // bookmarked and shared, and the back button undoes a filter.
 
@@ -11,7 +14,7 @@ export type Filter = { dim: string; value: string };
 
 type DashboardState = {
   siteId: string;
-  site: Site | null;
+  site: ClientSite | null;
   from: string | null;
   to: string | null;
   preset: string;
@@ -27,7 +30,7 @@ type DashboardState = {
 
 const Ctx = createContext<DashboardState | null>(null);
 
-export function DashboardProvider({ site, children }: { site: Site | null; children: ReactNode }) {
+export function DashboardProvider({ site, children }: { site: ClientSite | null; children: ReactNode }) {
   const params = useParams<{ site: string }>();
   const search = useSearchParams();
   const router = useRouter();

@@ -9,8 +9,9 @@ Include the version or commit, steps to reproduce, and the impact you expect.
 
 ## Hardening checklist for self-hosters
 
-- Set `OPTIC_PASSWORD` and a long random `OPTIC_SECRET`. The defaults are for local development only.
-- Serve Optic over HTTPS; the session cookie is marked `Secure` in production.
+- Create your account, then set `OPTIC_ALLOW_SIGNUP=false` unless you want others to sign up.
+- Passwords are hashed with scrypt; session cookies hold a random token whose SHA-256 is the only thing stored.
+- Serve Optic over HTTPS; the session cookie is marked `Secure` whenever the request arrives over HTTPS.
 - Put Optic behind a proxy that sets `X-Forwarded-For`, and restrict who can reach the dashboard if you can.
 - Treat site API keys as secrets; rotate one in Settings if it leaks.
 - Keep backups of the database file (see [self-hosting](docs/self-hosting.md#backups)).

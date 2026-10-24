@@ -83,8 +83,12 @@ the URL, so every view is shareable and the back button undoes a filter. Charts 
 ([`components/charts.tsx`](../src/components/charts.tsx)) using a categorical palette validated for colour-vision
 deficiency, with separate dark-mode steps.
 
-`proxy.ts` (Next 16's replacement for middleware) checks the signed session cookie for the dashboard and management
-API. The public endpoints check nothing but the site id, and `/api/ingest` checks the site's API key.
+**Accounts and access.** Users sign up with email and password (hashed with scrypt). A session is a random 256-bit
+token in an HttpOnly cookie; only its SHA-256 is stored in `auth_sessions`, so a copy of the database cannot be used to
+sign in. Every site has an owner; [`access.ts`](../src/lib/access.ts) lets owners view and change their sites and lets
+anyone view sites marked public (the bundled demo), read-only, without its API key. `proxy.ts` (Next 16's replacement
+for middleware) only redirects signed-out visitors away from account pages; each API route checks access itself. The
+tracker endpoints check nothing but the site id, and `/api/ingest` checks the site's API key.
 
 ## Demo data
 

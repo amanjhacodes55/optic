@@ -27,14 +27,16 @@ export type Site = {
   api_key: string;
   settings: SiteSettings;
   created_at: number;
+  owner_id: string | null;
+  public: boolean;
 };
 
-type Row = Omit<Site, "settings"> & { settings: string };
+type Row = Omit<Site, "settings" | "public"> & { settings: string; public: number };
 
 const cache = new Map<string, { site: Site | null; at: number }>();
 
 function hydrate(row: Row): Site {
-  return { ...row, settings: SiteSettings.parse(JSON.parse(row.settings || "{}")) };
+  return { ...row, public: !!row.public, settings: SiteSettings.parse(JSON.parse(row.settings || "{}")) };
 }
 
 export function getSite(id: string): Site | null {
@@ -46,16 +48,27 @@ export function getSite(id: string): Site | null {
   return site;
 }
 
-export function listSites(): Site[] {
-  return (db().prepare("SELECT * FROM sites ORDER BY created_at").all() as Row[]).map(hydrate);
+/** The user's own sites first, then public ones (the demo). */
+export function listSites(userId: string | null): Site[] {
+  return (
+    db().prepare("SELECT * FROM sites WHERE owner_id = ? OR public = 1 ORDER BY (owner_id = ?) DESC, created_at").all(userId ?? "", userId ?? "") as Row[]
+  ).map(hydrate);
 }
 
-export function createSite(input: { name: string; domain: string; timezone?: string; id?: string; settings?: Partial<SiteSettings> }): Site {
+export function createSite(input: {
+  name: string;
+  domain: string;
+  timezone?: string;
+  id?: string;
+  settings?: Partial<SiteSettings>;
+  ownerId?: string | null;
+  public?: boolean;
+}): Site {
   const id = input.id ?? randomId(6);
   const domain = input.domain.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase();
   db()
-    .prepare("INSERT INTO sites(id, name, domain, timezone, api_key, settings, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .run(id, input.name, domain, input.timezone ?? "UTC", "opk_" + randomId(18), JSON.stringify(SiteSettings.parse(input.settings ?? {})), Date.now());
+    .prepare("INSERT INTO sites(id, name, domain, timezone, api_key, settings, created_at, owner_id, public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(id, input.name, domain, input.timezone ?? "UTC", "opk_" + randomId(18), JSON.stringify(SiteSettings.parse(input.settings ?? {})), Date.now(), input.ownerId ?? null, input.public ? 1 : 0);
   cache.delete(id);
   return getSite(id)!;
 }

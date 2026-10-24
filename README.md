@@ -98,14 +98,15 @@ npm run seed      # four months of demo traffic for the Northwind Coffee shop (a
 npm run dev
 ```
 
-Open <http://localhost:3000>, sign in with the default password `optic`, and open the demo site. Browse the tracked
+Open <http://localhost:3000>. The demo dashboard opens without an account; **create an account** to add your own
+sites (each account sees only its own sites, plus the read-only demo). Browse the tracked
 demo shop at <http://localhost:3000/demo> and watch yourself appear in **Realtime**; your visit is also recorded under
 **Recordings**. `npm run demo:bots` sends a few scripted visitors through the shop to create more replays.
 
 **Run it for real with Docker:**
 
 ```bash
-OPTIC_PASSWORD='a long password' OPTIC_SECRET="$(openssl rand -hex 32)" docker compose up -d
+docker compose up -d   # then open http://your-server:3000 and create your account
 ```
 
 Then add your site in the dashboard and paste the snippet into your pages:
@@ -138,7 +139,8 @@ flowchart LR
   D --> Q["SQL reports +<br/>statistics"] --> U["Dashboard"]
 ```
 
-- **Next.js 16** (App Router, route handlers, `proxy.ts` for auth) serves the tracker, the API and the dashboard.
+- **Next.js 16** (App Router, route handlers, `proxy.ts`) serves the tracker, the API and the dashboard.
+- **Accounts**: email and password (scrypt), database-backed sessions, per-account sites, and a public read-only demo.
 - **SQLite** in WAL mode via better-sqlite3 stores everything in one file. Session-level counters mean most reports
   read one row per session. On 55,000 demo sessions and 656,000 events, every report returns in under 350 ms.
 - **Reports are plain SQL**: CTE chains for funnels, `LAG`/`LEAD` window functions for paths, first-visit cohorts.

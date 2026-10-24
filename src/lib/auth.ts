@@ -1,52 +1,126 @@
-// Single-owner auth: one password from the environment, a signed, expiring cookie.
-// Uses Web Crypto so the same code runs in the proxy and in route handlers.
+import crypto from "node:crypto";
+import { promisify } from "node:util";
+import { COOKIE } from "./auth-cookie";
+import { db } from "./db";
+import { randomId } from "./visitor";
 
-export const COOKIE = "optic_session";
-const MAX_AGE_S = 30 * 86_400;
+// Email + password accounts. Passwords are hashed with scrypt; sessions are random tokens kept in
+// an HttpOnly cookie, and only their SHA-256 is stored, so a leaked database cannot log anyone in.
 
-export function configuredPassword(): string {
-  return process.env.OPTIC_PASSWORD || "optic";
+export { COOKIE };
+export const SESSION_DAYS = 30;
+const scrypt = promisify(crypto.scrypt) as (pw: string, salt: Buffer, len: number, opts: crypto.ScryptOptions) => Promise<Buffer>;
+const SCRYPT = { N: 16384, r: 8, p: 1 };
+
+export type User = { id: string; email: string; name: string; created_at: number };
+
+export function signupAllowed(): boolean {
+  // Open by default so anyone can try a fresh install. Set OPTIC_ALLOW_SIGNUP=false to close it
+  // after creating your account; the first account can always be created.
+  if (process.env.OPTIC_ALLOW_SIGNUP !== "false") return true;
+  return (db().prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n === 0;
 }
 
-export function usingDefaultPassword(): boolean {
-  return !process.env.OPTIC_PASSWORD;
+export async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.randomBytes(16);
+  const key = await scrypt(password, salt, 32, SCRYPT);
+  return `scrypt$${salt.toString("base64")}$${key.toString("base64")}`;
 }
 
-/** Read-only public demo: anyone can view dashboards, nobody can change anything. */
-export function demoMode(): boolean {
-  return process.env.OPTIC_DEMO_MODE === "1" || process.env.OPTIC_DEMO_MODE === "true";
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [scheme, salt, hash] = stored.split("$");
+  if (scheme !== "scrypt" || !salt || !hash) return false;
+  const expected = Buffer.from(hash, "base64");
+  const key = await scrypt(password, Buffer.from(salt, "base64"), expected.length, SCRYPT);
+  return crypto.timingSafeEqual(key, expected);
 }
 
-function secret(): string {
-  return process.env.OPTIC_SECRET || "optic-secret:" + configuredPassword();
+export class AuthError extends Error {
+  constructor(message: string, public status = 400, public field?: string) {
+    super(message);
+  }
 }
 
-async function hmac(data: string): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
-  return Buffer.from(sig).toString("base64url");
+export async function createUser(input: { email: string; name: string; password: string }): Promise<User> {
+  const email = input.email.trim().toLowerCase();
+  if (db().prepare("SELECT 1 FROM users WHERE email = ?").get(email)) throw new AuthError("An account with this email already exists. Sign in instead.", 409, "email");
+  const user: User = { id: randomId(9), email, name: input.name.trim(), created_at: Date.now() };
+  db()
+    .prepare("INSERT INTO users(id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)")
+    .run(user.id, user.email, user.name, await hashPassword(input.password), user.created_at);
+  return user;
 }
 
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
+// A real hash to compare against when the email is unknown, so response time does not reveal
+// which emails have accounts.
+let dummyHash: Promise<string> | null = null;
+
+export async function authenticate(email: string, password: string): Promise<User> {
+  const row = db().prepare("SELECT id, email, name, created_at, password_hash FROM users WHERE email = ?").get(email.trim().toLowerCase()) as
+    | (User & { password_hash: string })
+    | undefined;
+  dummyHash ??= hashPassword("not-a-real-password");
+  const ok = await verifyPassword(password, row?.password_hash ?? (await dummyHash));
+  if (!row || !ok) throw new AuthError("Wrong email or password.", 401);
+  return { id: row.id, email: row.email, name: row.name, created_at: row.created_at };
 }
 
-export async function issueToken(now = Date.now()): Promise<{ value: string; maxAge: number }> {
-  const exp = Math.floor(now / 1000) + MAX_AGE_S;
-  return { value: `${exp}.${await hmac(String(exp))}`, maxAge: MAX_AGE_S };
+const sha = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
+
+export function createSession(userId: string): { token: string; maxAge: number } {
+  const token = crypto.randomBytes(32).toString("base64url");
+  const now = Date.now();
+  const conn = db();
+  conn.prepare("INSERT INTO auth_sessions(token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").run(sha(token), userId, now, now + SESSION_DAYS * 86_400_000);
+  conn.prepare("DELETE FROM auth_sessions WHERE expires_at < ?").run(now);
+  return { token, maxAge: SESSION_DAYS * 86_400 };
 }
 
-export async function verifyToken(token: string | undefined | null, now = Date.now()): Promise<boolean> {
-  if (!token) return false;
-  const [exp, sig] = token.split(".");
-  if (!exp || !sig || Number(exp) * 1000 < now) return false;
-  return safeEqual(sig, await hmac(exp));
+export function destroySession(token: string | undefined) {
+  if (token) db().prepare("DELETE FROM auth_sessions WHERE token_hash = ?").run(sha(token));
 }
 
-export async function checkPassword(input: string): Promise<boolean> {
-  // Compare HMACs so the comparison time does not depend on the password.
-  return safeEqual(await hmac("pw:" + input), await hmac("pw:" + configuredPassword()));
+export function userFromToken(token: string | undefined | null): User | null {
+  if (!token) return null;
+  return (
+    (db()
+      .prepare(
+        `SELECT u.id, u.email, u.name, u.created_at FROM auth_sessions s JOIN users u ON u.id = s.user_id
+         WHERE s.token_hash = ? AND s.expires_at > ?`,
+      )
+      .get(sha(token), Date.now()) as User | undefined) ?? null
+  );
+}
+
+function readCookie(header: string | null, name: string): string | undefined {
+  if (!header) return undefined;
+  for (const part of header.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return undefined;
+}
+
+export function tokenFrom(request: Request): string | undefined {
+  return readCookie(request.headers.get("cookie"), COOKIE);
+}
+
+export function currentUser(request: Request): User | null {
+  return userFromToken(tokenFrom(request));
+}
+
+/** Set-Cookie value. Secure only over HTTPS, so plain-HTTP self-hosting on a LAN still works. */
+export function sessionCookie(request: Request, token: string, maxAge: number): string {
+  const https = new URL(request.url).protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
+  return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${https ? "; Secure" : ""}`;
+}
+
+export function updateUser(id: string, patch: { name?: string }) {
+  if (patch.name) db().prepare("UPDATE users SET name = ? WHERE id = ?").run(patch.name.trim(), id);
+}
+
+export async function changePassword(id: string, current: string, next: string) {
+  const row = db().prepare("SELECT password_hash FROM users WHERE id = ?").get(id) as { password_hash: string } | undefined;
+  if (!row || !(await verifyPassword(current, row.password_hash))) throw new AuthError("Your current password is wrong.", 400, "current");
+  db().prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(await hashPassword(next), id);
 }

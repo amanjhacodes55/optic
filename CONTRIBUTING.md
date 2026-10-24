@@ -10,7 +10,7 @@ npm run seed     # demo data, so every report has something to show
 npm run dev
 ```
 
-Sign in at <http://localhost:3000> with the password `optic`.
+Open <http://localhost:3000>, create an account on the sign-up page, and add a site. The demo dashboard at `/dashboard/demo` works without an account.
 
 ## Before you open a pull request
 
