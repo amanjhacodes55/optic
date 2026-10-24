@@ -44,3 +44,6 @@ next-env.d.ts
 /data
 public/rrweb-record.js
 !.env.example
+
+# Local Netlify folder
+.netlify

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { COOKIE } from "./auth-cookie";
-import { db } from "./db";
+import { batch, one, run } from "./db";
 import { randomId } from "./visitor";
 
 // Email + password accounts. Passwords are hashed with scrypt; sessions are random tokens kept in
@@ -14,11 +14,11 @@ const SCRYPT = { N: 16384, r: 8, p: 1 };
 
 export type User = { id: string; email: string; name: string; created_at: number };
 
-export function signupAllowed(): boolean {
+export async function signupAllowed(): Promise<boolean> {
   // Open by default so anyone can try a fresh install. Set OPTIC_ALLOW_SIGNUP=false to close it
   // after creating your account; the first account can always be created.
   if (process.env.OPTIC_ALLOW_SIGNUP !== "false") return true;
-  return (db().prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n === 0;
+  return (await one<{ n: number }>("SELECT COUNT(*) AS n FROM users"))!.n === 0;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -43,11 +43,15 @@ export class AuthError extends Error {
 
 export async function createUser(input: { email: string; name: string; password: string }): Promise<User> {
   const email = input.email.trim().toLowerCase();
-  if (db().prepare("SELECT 1 FROM users WHERE email = ?").get(email)) throw new AuthError("An account with this email already exists. Sign in instead.", 409, "email");
+  if (await one("SELECT 1 FROM users WHERE email = ?", [email])) throw new AuthError("An account with this email already exists. Sign in instead.", 409, "email");
   const user: User = { id: randomId(9), email, name: input.name.trim(), created_at: Date.now() };
-  db()
-    .prepare("INSERT INTO users(id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)")
-    .run(user.id, user.email, user.name, await hashPassword(input.password), user.created_at);
+  await run("INSERT INTO users(id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)", [
+    user.id,
+    user.email,
+    user.name,
+    await hashPassword(input.password),
+    user.created_at,
+  ]);
   return user;
 }
 
@@ -56,9 +60,9 @@ export async function createUser(input: { email: string; name: string; password:
 let dummyHash: Promise<string> | null = null;
 
 export async function authenticate(email: string, password: string): Promise<User> {
-  const row = db().prepare("SELECT id, email, name, created_at, password_hash FROM users WHERE email = ?").get(email.trim().toLowerCase()) as
-    | (User & { password_hash: string })
-    | undefined;
+  const row = await one<User & { password_hash: string }>("SELECT id, email, name, created_at, password_hash FROM users WHERE email = ?", [
+    email.trim().toLowerCase(),
+  ]);
   dummyHash ??= hashPassword("not-a-real-password");
   const ok = await verifyPassword(password, row?.password_hash ?? (await dummyHash));
   if (!row || !ok) throw new AuthError("Wrong email or password.", 401);
@@ -67,28 +71,28 @@ export async function authenticate(email: string, password: string): Promise<Use
 
 const sha = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
-export function createSession(userId: string): { token: string; maxAge: number } {
+export async function createSession(userId: string): Promise<{ token: string; maxAge: number }> {
   const token = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
-  const conn = db();
-  conn.prepare("INSERT INTO auth_sessions(token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").run(sha(token), userId, now, now + SESSION_DAYS * 86_400_000);
-  conn.prepare("DELETE FROM auth_sessions WHERE expires_at < ?").run(now);
+  await batch([
+    { sql: "INSERT INTO auth_sessions(token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", args: [sha(token), userId, now, now + SESSION_DAYS * 86_400_000] },
+    { sql: "DELETE FROM auth_sessions WHERE expires_at < ?", args: [now] },
+  ]);
   return { token, maxAge: SESSION_DAYS * 86_400 };
 }
 
-export function destroySession(token: string | undefined) {
-  if (token) db().prepare("DELETE FROM auth_sessions WHERE token_hash = ?").run(sha(token));
+export async function destroySession(token: string | undefined) {
+  if (token) await run("DELETE FROM auth_sessions WHERE token_hash = ?", [sha(token)]);
 }
 
-export function userFromToken(token: string | undefined | null): User | null {
+export async function userFromToken(token: string | undefined | null): Promise<User | null> {
   if (!token) return null;
   return (
-    (db()
-      .prepare(
-        `SELECT u.id, u.email, u.name, u.created_at FROM auth_sessions s JOIN users u ON u.id = s.user_id
-         WHERE s.token_hash = ? AND s.expires_at > ?`,
-      )
-      .get(sha(token), Date.now()) as User | undefined) ?? null
+    (await one<User>(
+      `SELECT u.id, u.email, u.name, u.created_at FROM auth_sessions s JOIN users u ON u.id = s.user_id
+       WHERE s.token_hash = ? AND s.expires_at > ?`,
+      [sha(token), Date.now()],
+    )) ?? null
   );
 }
 
@@ -105,7 +109,7 @@ export function tokenFrom(request: Request): string | undefined {
   return readCookie(request.headers.get("cookie"), COOKIE);
 }
 
-export function currentUser(request: Request): User | null {
+export function currentUser(request: Request): Promise<User | null> {
   return userFromToken(tokenFrom(request));
 }
 
@@ -115,12 +119,12 @@ export function sessionCookie(request: Request, token: string, maxAge: number): 
   return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${https ? "; Secure" : ""}`;
 }
 
-export function updateUser(id: string, patch: { name?: string }) {
-  if (patch.name) db().prepare("UPDATE users SET name = ? WHERE id = ?").run(patch.name.trim(), id);
+export async function updateUser(id: string, patch: { name?: string }) {
+  if (patch.name) await run("UPDATE users SET name = ? WHERE id = ?", [patch.name.trim(), id]);
 }
 
 export async function changePassword(id: string, current: string, next: string) {
-  const row = db().prepare("SELECT password_hash FROM users WHERE id = ?").get(id) as { password_hash: string } | undefined;
+  const row = await one<{ password_hash: string }>("SELECT password_hash FROM users WHERE id = ?", [id]);
   if (!row || !(await verifyPassword(current, row.password_hash))) throw new AuthError("Your current password is wrong.", 400, "current");
-  db().prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(await hashPassword(next), id);
+  await run("UPDATE users SET password_hash = ? WHERE id = ?", [await hashPassword(next), id]);
 }

@@ -1,3 +1,4 @@
+import type { InValue } from "@libsql/client";
 import { getSite, type Site } from "../sites";
 
 // Every report takes the same inputs: a site, a date range in the site's time zone, optional
@@ -64,9 +65,9 @@ export function localDay(ts: number, offsetMs: number): string {
 
 const DAY = 86_400_000;
 
-export function parseContext(params: URLSearchParams): QueryContext {
+export async function parseContext(params: URLSearchParams): Promise<QueryContext> {
   const siteId = params.get("site") ?? "";
-  const site = getSite(siteId);
+  const site = await getSite(siteId);
   if (!site) throw new QueryError("unknown site", 404);
   const offsetMs = tzOffsetMs(site.timezone, Date.now());
   const today = localDay(Date.now(), offsetMs);
@@ -106,9 +107,9 @@ export function parseContext(params: URLSearchParams): QueryContext {
  * WHERE clause over the sessions table (alias `s`) for a site, a time window and the filters.
  * Values are always bound as parameters; dimension names come from a fixed allow-list.
  */
-export function sessionWhere(ctx: QueryContext, window: { start: number; end: number } = ctx): { sql: string; args: unknown[] } {
+export function sessionWhere(ctx: QueryContext, window: { start: number; end: number } = ctx): { sql: string; args: InValue[] } {
   const parts = ["s.site_id = ?", "s.started_at >= ?", "s.started_at < ?"];
-  const args: unknown[] = [ctx.site.id, window.start, window.end];
+  const args: InValue[] = [ctx.site.id, window.start, window.end];
   for (const f of ctx.filters) {
     if (f.dim === "page") {
       parts.push("EXISTS (SELECT 1 FROM events fe WHERE fe.session_id = s.id AND fe.type = 'pageview' AND fe.path = ?)");

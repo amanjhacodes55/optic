@@ -29,26 +29,38 @@ export async function POST(request: Request) {
   try {
     const key = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
     const body = Body.parse(await readJson(request, 2_000_000));
-    const site = getSite(body.site);
+    const site = await getSite(body.site);
     if (!site || !key || site.api_key !== key) return Response.json({ error: "invalid site or API key" }, { status: 401 });
     if (rateLimited("ingest:" + site.id, 120)) return Response.json({ error: "rate limited" }, { status: 429 });
 
     const now = Date.now();
-    let accepted = 0;
     const rejected: { index: number; reason: string }[] = [];
+    // Events from the same person, platform and device go to the pipeline together, in order, as
+    // the browser tracker sends them. Different people are independent, so a few groups run at
+    // once: a request can carry 1000 events, and each pipeline call talks to the database.
+    const groups = new Map<string, { env: Envelope; userAgent: string; country: string | null }>();
     body.events.forEach((e, index) => {
       if (!e.user_id && !e.client_id) return rejected.push({ index, reason: "user_id or client_id is required" });
       const ts = e.timestamp == null ? now : typeof e.timestamp === "number" ? e.timestamp : Date.parse(e.timestamp);
       if (!Number.isFinite(ts) || ts < now - MAX_AGE) return rejected.push({ index, reason: "timestamp missing or older than 90 days" });
-      const env: Envelope = {
-        s: site.id,
-        uid: e.user_id ?? null,
-        cid: e.client_id ?? null,
-        pf: e.platform,
-        e: [{ t: e.type, n: e.name, u: e.url, r: e.referrer ?? null, ti: e.title ?? null, p: e.props, rev: e.revenue, ts }],
-      };
-      accepted += ingest(env, { ip: "server", userAgent: e.user_agent ?? "", country: e.country?.toUpperCase() ?? null, now, trustTimestamps: true }).accepted;
+      const country = e.country?.toUpperCase() ?? null;
+      const key = JSON.stringify([e.user_id, e.client_id, e.platform, e.user_agent, country]);
+      let group = groups.get(key);
+      if (!group) {
+        group = { env: { s: site.id, uid: e.user_id ?? null, cid: e.client_id ?? null, pf: e.platform, e: [] }, userAgent: e.user_agent ?? "", country };
+        groups.set(key, group);
+      }
+      group.env.e.push({ t: e.type, n: e.name, u: e.url, r: e.referrer ?? null, ti: e.title ?? null, p: e.props, rev: e.revenue, ts });
     });
+    let accepted = 0;
+    const queue = [...groups.values()];
+    await Promise.all(
+      Array.from({ length: Math.min(8, queue.length) }, async () => {
+        for (let g = queue.shift(); g; g = queue.shift()) {
+          accepted += (await ingest(g.env, { ip: "server", userAgent: g.userAgent, country: g.country, now, trustTimestamps: true })).accepted;
+        }
+      }),
+    );
     return Response.json({ accepted, rejected }, { status: rejected.length && !accepted ? 400 : 202 });
   } catch (err) {
     return handleError(err);

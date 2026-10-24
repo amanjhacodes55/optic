@@ -6,9 +6,9 @@ import { handleError } from "@/lib/http";
 import { createSite, listSites } from "@/lib/sites";
 
 export async function GET(request: Request) {
-  await connection(); // the database is read synchronously, so opt out of build-time prerendering explicitly
-  const user = currentUser(request);
-  return Response.json(listSites(user?.id ?? null).map((s) => publicView(s, user)));
+  await connection(); // per-request data: opt out of build-time prerendering explicitly
+  const user = await currentUser(request);
+  return Response.json((await listSites(user?.id ?? null)).map((s) => publicView(s, user)));
 }
 
 const Create = z.object({
@@ -19,10 +19,10 @@ const Create = z.object({
 
 export async function POST(request: Request) {
   try {
-    const user = currentUser(request);
+    const user = await currentUser(request);
     if (!user) return Response.json({ error: "Sign in to add a site" }, { status: 401 });
     const body = Create.parse(await request.json());
-    return Response.json(publicView(createSite({ ...body, ownerId: user.id }), user), { status: 201 });
+    return Response.json(publicView(await createSite({ ...body, ownerId: user.id }), user), { status: 201 });
   } catch (err) {
     return handleError(err);
   }

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     if (rateLimited("collect:" + ip)) return Response.json({ error: "rate limited" }, { status: 429, headers: CORS });
 
     const env = Envelope.parse(await readJson(request, 256_000));
-    const result = ingest(env, { ip, userAgent: ua, country: countryFrom(request.headers, env.tz), now: Date.now() });
+    const result = await ingest(env, { ip, userAgent: ua, country: countryFrom(request.headers, env.tz), now: Date.now() });
     return Response.json({ ok: true, accepted: result.accepted }, { status: 202, headers: CORS });
   } catch (err) {
     return handleError(err, CORS);

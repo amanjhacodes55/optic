@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db } from "./db";
+import { all, batch, one, run } from "./db";
 import { randomId } from "./visitor";
 
 export const SiteSettings = z.object({
@@ -39,23 +39,21 @@ function hydrate(row: Row): Site {
   return { ...row, public: !!row.public, settings: SiteSettings.parse(JSON.parse(row.settings || "{}")) };
 }
 
-export function getSite(id: string): Site | null {
+export async function getSite(id: string): Promise<Site | null> {
   const hit = cache.get(id);
   if (hit && Date.now() - hit.at < 10_000) return hit.site;
-  const row = db().prepare("SELECT * FROM sites WHERE id = ?").get(id) as Row | undefined;
+  const row = await one<Row>("SELECT * FROM sites WHERE id = ?", [id]);
   const site = row ? hydrate(row) : null;
   cache.set(id, { site, at: Date.now() });
   return site;
 }
 
 /** The user's own sites first, then public ones (the demo). */
-export function listSites(userId: string | null): Site[] {
-  return (
-    db().prepare("SELECT * FROM sites WHERE owner_id = ? OR public = 1 ORDER BY (owner_id = ?) DESC, created_at").all(userId ?? "", userId ?? "") as Row[]
-  ).map(hydrate);
+export async function listSites(userId: string | null): Promise<Site[]> {
+  return (await all<Row>("SELECT * FROM sites WHERE owner_id = ? OR public = 1 ORDER BY (owner_id = ?) DESC, created_at", [userId ?? "", userId ?? ""])).map(hydrate);
 }
 
-export function createSite(input: {
+export async function createSite(input: {
   name: string;
   domain: string;
   timezone?: string;
@@ -63,41 +61,52 @@ export function createSite(input: {
   settings?: Partial<SiteSettings>;
   ownerId?: string | null;
   public?: boolean;
-}): Site {
+}): Promise<Site> {
   const id = input.id ?? randomId(6);
   const domain = input.domain.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase();
-  db()
-    .prepare("INSERT INTO sites(id, name, domain, timezone, api_key, settings, created_at, owner_id, public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-    .run(id, input.name, domain, input.timezone ?? "UTC", "opk_" + randomId(18), JSON.stringify(SiteSettings.parse(input.settings ?? {})), Date.now(), input.ownerId ?? null, input.public ? 1 : 0);
+  await run("INSERT INTO sites(id, name, domain, timezone, api_key, settings, created_at, owner_id, public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+    id,
+    input.name,
+    domain,
+    input.timezone ?? "UTC",
+    "opk_" + randomId(18),
+    JSON.stringify(SiteSettings.parse(input.settings ?? {})),
+    Date.now(),
+    input.ownerId ?? null,
+    input.public ? 1 : 0,
+  ]);
   cache.delete(id);
-  return getSite(id)!;
+  return (await getSite(id))!;
 }
 
-export function updateSite(id: string, patch: { name?: string; domain?: string; timezone?: string; settings?: Partial<SiteSettings> }): Site | null {
-  const site = getSite(id);
+export async function updateSite(id: string, patch: { name?: string; domain?: string; timezone?: string; settings?: Partial<SiteSettings> }): Promise<Site | null> {
+  const site = await getSite(id);
   if (!site) return null;
   const settings = SiteSettings.parse({ ...site.settings, ...patch.settings });
-  db()
-    .prepare("UPDATE sites SET name = ?, domain = ?, timezone = ?, settings = ? WHERE id = ?")
-    .run(patch.name ?? site.name, patch.domain ?? site.domain, patch.timezone ?? site.timezone, JSON.stringify(settings), id);
+  await run("UPDATE sites SET name = ?, domain = ?, timezone = ?, settings = ? WHERE id = ?", [
+    patch.name ?? site.name,
+    patch.domain ?? site.domain,
+    patch.timezone ?? site.timezone,
+    JSON.stringify(settings),
+    id,
+  ]);
   cache.delete(id);
   return getSite(id);
 }
 
-export function rotateApiKey(id: string): string {
+export async function rotateApiKey(id: string): Promise<string> {
   const key = "opk_" + randomId(18);
-  db().prepare("UPDATE sites SET api_key = ? WHERE id = ?").run(key, id);
+  await run("UPDATE sites SET api_key = ? WHERE id = ?", [key, id]);
   cache.delete(id);
   return key;
 }
 
-export function deleteSite(id: string): void {
-  const conn = db();
-  conn.transaction(() => {
-    for (const t of ["events", "clicks", "sessions", "goals", "funnels", "tags"]) conn.prepare(`DELETE FROM ${t} WHERE site_id = ?`).run(id);
-    conn.prepare("DELETE FROM recording_chunks WHERE recording_id IN (SELECT id FROM recordings WHERE site_id = ?)").run(id);
-    conn.prepare("DELETE FROM recordings WHERE site_id = ?").run(id);
-    conn.prepare("DELETE FROM sites WHERE id = ?").run(id);
-  })();
+export async function deleteSite(id: string): Promise<void> {
+  await batch([
+    ...["events", "clicks", "sessions", "goals", "funnels", "tags"].map((t) => ({ sql: `DELETE FROM ${t} WHERE site_id = ?`, args: [id] })),
+    { sql: "DELETE FROM recording_chunks WHERE recording_id IN (SELECT id FROM recordings WHERE site_id = ?)", args: [id] },
+    { sql: "DELETE FROM recordings WHERE site_id = ?", args: [id] },
+    { sql: "DELETE FROM sites WHERE id = ?", args: [id] },
+  ]);
   cache.delete(id);
 }

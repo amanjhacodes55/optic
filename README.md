@@ -141,7 +141,8 @@ flowchart LR
 
 - **Next.js 16** (App Router, route handlers, `proxy.ts`) serves the tracker, the API and the dashboard.
 - **Accounts**: email and password (scrypt), database-backed sessions, per-account sites, and a public read-only demo.
-- **SQLite** in WAL mode via better-sqlite3 stores everything in one file. Session-level counters mean most reports
+- **SQLite** through libSQL stores everything in one WAL-mode file, or in a hosted [Turso](https://turso.tech) database
+  on serverless hosts such as Netlify (set `TURSO_DATABASE_URL`). Session-level counters mean most reports
   read one row per session. On 55,000 demo sessions and 656,000 events, every report returns in under 350 ms.
 - **Reports are plain SQL**: CTE chains for funnels, `LAG`/`LEAD` window functions for paths, first-visit cohorts.
 - **Statistics are dependency-free TypeScript** ([`src/lib/stats.ts`](src/lib/stats.ts)), unit tested.

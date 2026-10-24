@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     if (rateLimited("login:" + clientIp(request.headers), 10)) throw new AuthError("Too many attempts. Wait a minute and try again.", 429);
     const body = Login.parse(await request.json());
     const user = await authenticate(body.email, body.password);
-    const { token, maxAge } = createSession(user.id);
+    const { token, maxAge } = await createSession(user.id);
     const res = Response.json({ user });
     res.headers.append("Set-Cookie", sessionCookie(request, token, maxAge));
     return res;

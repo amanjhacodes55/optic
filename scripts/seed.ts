@@ -4,7 +4,7 @@
 //   npm run seed                 # 120 days into ./data/optic.db
 //   SEED_DAYS=30 npm run seed    # smaller
 //   SEED_RESET=1 npm run seed    # wipe the demo site first
-import { db } from "../src/lib/db";
+import { batch, one, run } from "../src/lib/db";
 import { ingest, type WireEvent } from "../src/lib/ingest";
 import { createSite, deleteSite, getSite } from "../src/lib/sites";
 import layout from "./demo-layout.json";
@@ -277,10 +277,11 @@ function visit(v: Visitor, start: number, spec: ChannelSpec, mult: { buy: number
 }
 
 // ---- main ---------------------------------------------------------------------------------------
-function setupSite() {
-  if (process.env.SEED_RESET === "1" && getSite(SITE_ID)) deleteSite(SITE_ID);
-  if (getSite(SITE_ID)) return getSite(SITE_ID)!;
-  const site = createSite({
+async function setupSite() {
+  if (process.env.SEED_RESET === "1" && (await getSite(SITE_ID))) await deleteSite(SITE_ID);
+  const existing = await getSite(SITE_ID);
+  if (existing) return existing;
+  const site = await createSite({
     id: SITE_ID,
     name: "Northwind Coffee (demo)",
     domain: DOMAIN,
@@ -288,42 +289,41 @@ function setupSite() {
     public: true, // read-only for everyone, owned by nobody
     settings: { identity: "persistent", currency: "USD", consent: "none", respectDnt: false, replay: { enabled: true, sampleRate: 1, maskInputs: true } },
   });
-  const conn = db();
-  const goal = conn.prepare("INSERT INTO goals(site_id, name, kind, match, value) VALUES (?, ?, ?, ?, ?)");
-  goal.run(SITE_ID, "Purchase", "event", "purchase", 0);
-  goal.run(SITE_ID, "Newsletter signup", "event", "newsletter_signup", 3);
-  goal.run(SITE_ID, "Reached checkout", "page", "/demo/checkout", 0);
-  goal.run(SITE_ID, "Downloaded brewing guide", "event", "file_download", 1);
-  conn.prepare("INSERT INTO funnels(site_id, name, steps) VALUES (?, ?, ?)").run(
-    SITE_ID,
-    "Shop to purchase",
-    JSON.stringify([
+  const goal = (name: string, kind: string, match: string, value: number) => ({
+    sql: "INSERT INTO goals(site_id, name, kind, match, value) VALUES (?, ?, ?, ?, ?)",
+    args: [SITE_ID, name, kind, match, value],
+  });
+  const funnel = (name: string, steps: object[]) => ({ sql: "INSERT INTO funnels(site_id, name, steps) VALUES (?, ?, ?)", args: [SITE_ID, name, JSON.stringify(steps)] });
+  const tag = (kind: string, match: string, event: string) => ({
+    sql: "INSERT INTO tags(site_id, kind, match, event, consent) VALUES (?, ?, ?, ?, 'analytics')",
+    args: [SITE_ID, kind, match, event],
+  });
+  await batch([
+    goal("Purchase", "event", "purchase", 0),
+    goal("Newsletter signup", "event", "newsletter_signup", 3),
+    goal("Reached checkout", "page", "/demo/checkout", 0),
+    goal("Downloaded brewing guide", "event", "file_download", 1),
+    funnel("Shop to purchase", [
       { label: "Viewed a product", kind: "page", match: "/demo/product/*" },
       { label: "Added to cart", kind: "event", match: "add_to_cart" },
       { label: "Started checkout", kind: "page", match: "/demo/checkout" },
       { label: "Purchased", kind: "event", match: "purchase" },
     ]),
-  );
-  conn.prepare("INSERT INTO funnels(site_id, name, steps) VALUES (?, ?, ?)").run(
-    SITE_ID,
-    "Content to customer",
-    JSON.stringify([
+    funnel("Content to customer", [
       { label: "Read the brewing guide", kind: "page", match: "/demo/brewing-guide" },
       { label: "Opened the shop", kind: "page", match: "/demo/shop" },
       { label: "Purchased", kind: "event", match: "purchase" },
     ]),
-  );
-  const tag = conn.prepare("INSERT INTO tags(site_id, kind, match, event, consent) VALUES (?, ?, ?, ?, 'analytics')");
-  tag.run(SITE_ID, "submit", "#newsletter", "newsletter_signup");
-  tag.run(SITE_ID, "click", "#hero-shop", "hero_cta_click");
-  tag.run(SITE_ID, "pageview", "/demo/thank-you", "order_confirmation_view");
+    tag("submit", "#newsletter", "newsletter_signup"),
+    tag("click", "#hero-shop", "hero_cta_click"),
+    tag("pageview", "/demo/thank-you", "order_confirmation_view"),
+  ]);
   return site;
 }
 
-function main() {
-  const site = setupSite();
-  const conn = db();
-  const existing = (conn.prepare("SELECT COUNT(*) AS n FROM sessions WHERE site_id = ?").get(SITE_ID) as { n: number }).n;
+async function main() {
+  const site = await setupSite();
+  const existing = (await one<{ n: number }>("SELECT COUNT(*) AS n FROM sessions WHERE site_id = ?", [SITE_ID]))!.n;
   if (existing > 0 && process.env.SEED_RESET !== "1") {
     console.log(`demo site already has ${existing} sessions; run with SEED_RESET=1 to regenerate`);
     return;
@@ -354,50 +354,51 @@ function main() {
     const isToday = d === 0;
     const count = Math.round(volume);
 
-    conn.transaction(() => {
-      for (let i = 0; i < count; i++) {
-        const hour = pick(Array.from({ length: 24 }, (_, h) => h), HOURS.map((w, h) => HOURS[(h + 20) % 24] * 0.3 + w * 0.7));
-        const start = dayStart + hour * 3_600_000 + int(0, 3_599_000);
-        if (isToday && start > now - 120_000) continue;
-        const returning = pool.length > 50 && chance(0.27);
-        let v: Visitor;
-        if (returning) {
-          // Recent and loyal visitors are more likely to come back.
-          v = pool[Math.max(0, pool.length - 1 - Math.floor(Math.abs(normal()) * pool.length * 0.35))];
-          if (rand() > 0.3 + v.loyal * 0.7) v = newVisitor(DAYS - d);
-        } else v = newVisitor(DAYS - d);
-        if (!returning || v.firstDay === DAYS - d) pool.push(v);
-        const spec = pick(CHANNELS, mix);
-        const evs = visit(v, start, spec, mult);
-        if (isToday) {
-          const cut = evs.findIndex((e) => (e.ts ?? 0) > now);
-          if (cut === 0) continue;
-          if (cut > 0) evs.length = cut;
-        }
-        const lang = v.lang;
-        for (let k = 0; k < evs.length; k += 200) {
-          ingest(
-            { s: SITE_ID, cid: v.cid, sw: v.screen[0], sh: v.screen[1], tz: null, lang, pf: "web", e: evs.slice(k, k + 200) },
-            { ip: "seed", userAgent: v.ua, country: v.country, now, trustTimestamps: true },
-          );
-        }
-        sessions++;
-        events += evs.length;
+    for (let i = 0; i < count; i++) {
+      const hour = pick(Array.from({ length: 24 }, (_, h) => h), HOURS.map((w, h) => HOURS[(h + 20) % 24] * 0.3 + w * 0.7));
+      const start = dayStart + hour * 3_600_000 + int(0, 3_599_000);
+      if (isToday && start > now - 120_000) continue;
+      const returning = pool.length > 50 && chance(0.27);
+      let v: Visitor;
+      if (returning) {
+        // Recent and loyal visitors are more likely to come back.
+        v = pool[Math.max(0, pool.length - 1 - Math.floor(Math.abs(normal()) * pool.length * 0.35))];
+        if (rand() > 0.3 + v.loyal * 0.7) v = newVisitor(DAYS - d);
+      } else v = newVisitor(DAYS - d);
+      if (!returning || v.firstDay === DAYS - d) pool.push(v);
+      const spec = pick(CHANNELS, mix);
+      const evs = visit(v, start, spec, mult);
+      if (isToday) {
+        const cut = evs.findIndex((e) => (e.ts ?? 0) > now);
+        if (cut === 0) continue;
+        if (cut > 0) evs.length = cut;
       }
-    })();
+      const lang = v.lang;
+      for (let k = 0; k < evs.length; k += 200) {
+        await ingest(
+          { s: SITE_ID, cid: v.cid, sw: v.screen[0], sh: v.screen[1], tz: null, lang, pf: "web", e: evs.slice(k, k + 200) },
+          { ip: "seed", userAgent: v.ua, country: v.country, now, trustTimestamps: true },
+        );
+      }
+      sessions++;
+      events += evs.length;
+    }
     if (note || d % 20 === 0) console.log(`${new Date(dayStart + offset).toISOString().slice(0, 10)}  ${count} sessions ${note ? "← " + note : ""}`);
   }
   // A few server-side (CRM / point-of-sale) orders to show cross-platform data.
   for (let i = 0; i < 60; i++) {
     const ts = now - int(1, DAYS) * DAY + int(0, DAY - 1);
     const value = pick([32, 48, 64, 96]);
-    ingest(
+    await ingest(
       { s: SITE_ID, uid: "pos-customer-" + int(1, 400), pf: "pos", e: [{ t: "event", n: "purchase", u: "/store/front-counter", rev: value, p: { item: pick(PRODUCTS).name, channel: "in-store" }, ts }] },
       { ip: "server", userAgent: "", country: "US", now, trustTimestamps: true },
     );
   }
-  conn.exec("ANALYZE");
+  await run("ANALYZE");
   console.log(`seeded ${sessions.toLocaleString()} sessions and ${events.toLocaleString()} events for "${site.name}" in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

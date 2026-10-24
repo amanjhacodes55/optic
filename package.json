@@ -15,8 +15,10 @@
     "demo:bots": "tsx scripts/bots.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "@rrweb/record": "^2.1.7",
-    "better-sqlite3": "^12.11.1",
+    "fetch-ssrf-guard": "^0.1.0",
+    "llm-markdown-guard": "^0.1.0",
     "lucide-react": "^1.61.0",
     "next": "16.4.3",
     "react": "19.3.0",
@@ -26,7 +28,6 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

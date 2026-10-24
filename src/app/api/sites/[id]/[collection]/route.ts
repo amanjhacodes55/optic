@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { all, insert, run } from "@/lib/db";
 import { handleError } from "@/lib/http";
 import { clearGoalsCache } from "@/lib/ingest";
 import { editableSite, viewableSite } from "@/lib/access";
@@ -32,11 +32,11 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/sites/[i
   const c = resolve(collection);
   if (!c) return Response.json({ error: "not found" }, { status: 404 });
   try {
-    viewableSite(id, currentUser(request));
+    await viewableSite(id, await currentUser(request));
   } catch (err) {
     return handleError(err);
   }
-  const rows = db().prepare(`SELECT * FROM ${c} WHERE site_id = ? ORDER BY id`).all(id) as Record<string, unknown>[];
+  const rows = await all(`SELECT * FROM ${c} WHERE site_id = ? ORDER BY id`, [id]);
   return Response.json(c === "funnels" ? rows.map((r) => ({ ...r, steps: JSON.parse(r.steps as string) })) : rows);
 }
 
@@ -45,26 +45,30 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/sites/[
     const { id, collection } = await ctx.params;
     const c = resolve(collection);
     if (!c) return Response.json({ error: "not found" }, { status: 404 });
-    editableSite(id, currentUser(request));
+    await editableSite(id, await currentUser(request));
     const body = SCHEMAS[c].parse(await request.json());
-    const conn = db();
-    let res;
+    let newId: number;
     if (c === "goals") {
       const g = body as z.infer<typeof SCHEMAS.goals>;
-      res = conn.prepare("INSERT INTO goals(site_id, name, kind, match, value) VALUES (?, ?, ?, ?, ?)").run(id, g.name, g.kind, g.match, g.value);
+      newId = await insert("INSERT INTO goals(site_id, name, kind, match, value) VALUES (?, ?, ?, ?, ?)", [id, g.name, g.kind, g.match, g.value]);
       clearGoalsCache(id);
     } else if (c === "funnels") {
       const f = body as z.infer<typeof SCHEMAS.funnels>;
-      res = conn.prepare("INSERT INTO funnels(site_id, name, steps) VALUES (?, ?, ?)").run(id, f.name, JSON.stringify(f.steps));
+      newId = await insert("INSERT INTO funnels(site_id, name, steps) VALUES (?, ?, ?)", [id, f.name, JSON.stringify(f.steps)]);
     } else {
       const t = body as z.infer<typeof SCHEMAS.tags>;
       if (t.kind !== "script" && !t.event) return Response.json({ error: "event name is required" }, { status: 400 });
       if (t.kind === "script" && !/^https:\/\//.test(t.match)) return Response.json({ error: "script tags must use an https:// URL" }, { status: 400 });
-      res = conn
-        .prepare("INSERT INTO tags(site_id, kind, match, event, consent, enabled) VALUES (?, ?, ?, ?, ?, ?)")
-        .run(id, t.kind, t.match, t.event ?? null, t.consent, t.enabled ? 1 : 0);
+      newId = await insert("INSERT INTO tags(site_id, kind, match, event, consent, enabled) VALUES (?, ?, ?, ?, ?, ?)", [
+        id,
+        t.kind,
+        t.match,
+        t.event ?? null,
+        t.consent,
+        t.enabled ? 1 : 0,
+      ]);
     }
-    return Response.json({ id: Number(res.lastInsertRowid) }, { status: 201 });
+    return Response.json({ id: newId }, { status: 201 });
   } catch (err) {
     return handleError(err);
   }
@@ -75,11 +79,11 @@ export async function DELETE(request: NextRequest, ctx: RouteContext<"/api/sites
   const c = resolve(collection);
   if (!c) return Response.json({ error: "not found" }, { status: 404 });
   try {
-    editableSite(id, currentUser(request));
+    await editableSite(id, await currentUser(request));
   } catch (err) {
     return handleError(err);
   }
-  db().prepare(`DELETE FROM ${c} WHERE site_id = ? AND id = ?`).run(id, Number(request.nextUrl.searchParams.get("item")));
+  await run(`DELETE FROM ${c} WHERE site_id = ? AND id = ?`, [id, Number(request.nextUrl.searchParams.get("item"))]);
   if (c === "goals") clearGoalsCache(id);
   return new Response(null, { status: 204 });
 }

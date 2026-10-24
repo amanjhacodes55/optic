@@ -14,8 +14,8 @@ export function canEdit(site: Site, user: User | null): boolean {
   return !!user && site.owner_id === user.id;
 }
 
-export function viewableSite(siteId: string, user: User | null): Site {
-  const site = getSite(siteId);
+export async function viewableSite(siteId: string, user: User | null): Promise<Site> {
+  const site = await getSite(siteId);
   if (!site || (!site.public && !canEdit(site, user))) {
     // Same answer for "missing" and "not yours", so site ids cannot be probed.
     throw new AccessError(user ? "Site not found" : "Sign in to view this site", user ? 404 : 401);
@@ -23,8 +23,8 @@ export function viewableSite(siteId: string, user: User | null): Site {
   return site;
 }
 
-export function editableSite(siteId: string, user: User | null): Site {
-  const site = viewableSite(siteId, user);
+export async function editableSite(siteId: string, user: User | null): Promise<Site> {
+  const site = await viewableSite(siteId, user);
   if (!canEdit(site, user)) throw new AccessError(user ? "This is a read-only demo. Add your own site to change settings." : "Sign in to make changes", user ? 403 : 401);
   return site;
 }

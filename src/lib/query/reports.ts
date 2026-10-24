@@ -1,5 +1,6 @@
 import zlib from "node:zlib";
-import { db } from "../db";
+import type { InValue } from "@libsql/client";
+import { all as allRows, one as oneRow } from "../db";
 import {
   bucketExpr,
   bucketLabels,
@@ -11,8 +12,8 @@ import {
   type SessionDimension,
 } from "./context";
 
-const all = <T>(sql: string, args: unknown[]) => db().prepare(sql).all(...args) as T[];
-const one = <T>(sql: string, args: unknown[]) => db().prepare(sql).get(...args) as T;
+const all = <T>(sql: string, args: InValue[]) => allRows<T>(sql, args);
+const one = <T>(sql: string, args: InValue[]) => oneRow<T>(sql, args) as Promise<T>;
 
 // ---------------------------------------------------------------------------------------------
 // Overview
@@ -42,14 +43,14 @@ const KPI_SELECT = `
   COALESCE(SUM(s.pageviews) * 1.0 / NULLIF(COUNT(*), 0), 0) AS views_per_session,
   COUNT(DISTINCT CASE WHEN s.is_new = 1 THEN s.visitor_id END) AS new_visitors`;
 
-function kpis(ctx: QueryContext, window: { start: number; end: number }): Kpis {
+async function kpis(ctx: QueryContext, window: { start: number; end: number }): Promise<Kpis> {
   const w = sessionWhere(ctx, window);
-  return one<Kpis>(`SELECT ${KPI_SELECT} FROM sessions s WHERE ${w.sql}`, w.args);
+  return await one<Kpis>(`SELECT ${KPI_SELECT} FROM sessions s WHERE ${w.sql}`, w.args);
 }
 
-function series(ctx: QueryContext, window: { start: number; end: number }) {
+async function series(ctx: QueryContext, window: { start: number; end: number }) {
   const w = sessionWhere(ctx, window);
-  const rows = all<Kpis & { bucket: string }>(
+  const rows = await all<Kpis & { bucket: string }>(
     `SELECT ${bucketExpr(ctx, "s.started_at")} AS bucket, ${KPI_SELECT} FROM sessions s WHERE ${w.sql} GROUP BY bucket ORDER BY bucket`,
     w.args,
   );
@@ -69,26 +70,27 @@ function series(ctx: QueryContext, window: { start: number; end: number }) {
   });
 }
 
-export function overview(ctx: QueryContext) {
-  return {
-    bucket: ctx.bucket,
-    current: kpis(ctx, ctx),
-    previous: kpis(ctx, ctx.previous),
-    series: series(ctx, ctx),
-    previousSeries: series(ctx, ctx.previous),
-  };
+export async function overview(ctx: QueryContext) {
+  // Independent queries run side by side: on a hosted database each one is a network round trip.
+  const [current, previous, currentSeries, previousSeries] = await Promise.all([
+    kpis(ctx, ctx),
+    kpis(ctx, ctx.previous),
+    series(ctx, ctx),
+    series(ctx, ctx.previous),
+  ]);
+  return { bucket: ctx.bucket, current, previous, series: currentSeries, previousSeries };
 }
 
 // ---------------------------------------------------------------------------------------------
 // Breakdowns: one dimension, the standard metric set
 
-export function breakdown(ctx: QueryContext, dim: string, limit = 50) {
+export async function breakdown(ctx: QueryContext, dim: string, limit = 50) {
   if (dim === "page") return pages(ctx, limit);
   if (dim === "event") return events(ctx, limit);
   if (!(dim in SESSION_DIMENSIONS)) throw new QueryError("unknown dimension");
   const col = SESSION_DIMENSIONS[dim as SessionDimension];
   const w = sessionWhere(ctx);
-  return all<Record<string, unknown>>(
+  return await all<Record<string, unknown>>(
     `SELECT COALESCE(s.${col}, '(none)') AS value, ${KPI_SELECT}
      FROM sessions s WHERE ${w.sql}
      GROUP BY s.${col} ORDER BY visitors DESC, sessions DESC LIMIT ?`,
@@ -96,9 +98,9 @@ export function breakdown(ctx: QueryContext, dim: string, limit = 50) {
   );
 }
 
-function pages(ctx: QueryContext, limit: number) {
+async function pages(ctx: QueryContext, limit: number) {
   const w = sessionWhere(ctx);
-  return all<Record<string, unknown>>(
+  return await all<Record<string, unknown>>(
     `WITH base AS (SELECT s.id, s.entry_page, s.exit_page, s.pageviews FROM sessions s WHERE ${w.sql}),
      pv AS (
        SELECT e.path, COUNT(*) AS pageviews, COUNT(DISTINCT e.visitor_id) AS visitors, COUNT(DISTINCT e.session_id) AS sessions
@@ -125,9 +127,9 @@ function pages(ctx: QueryContext, limit: number) {
   );
 }
 
-function events(ctx: QueryContext, limit: number) {
+async function events(ctx: QueryContext, limit: number) {
   const w = sessionWhere(ctx);
-  return all<Record<string, unknown>>(
+  return await all<Record<string, unknown>>(
     `SELECT e.name AS value, COUNT(*) AS events, COUNT(DISTINCT e.visitor_id) AS visitors,
             COUNT(DISTINCT e.session_id) AS sessions, COALESCE(SUM(e.revenue), 0) AS revenue,
             COUNT(*) * 1.0 / NULLIF((SELECT COUNT(*) FROM sessions s WHERE ${w.sql}), 0) AS per_session
@@ -139,9 +141,9 @@ function events(ctx: QueryContext, limit: number) {
 }
 
 /** Top values of each property of one event, e.g. which products were added to the cart. */
-export function eventProperties(ctx: QueryContext, name: string) {
+export async function eventProperties(ctx: QueryContext, name: string) {
   const w = sessionWhere(ctx);
-  const rows = all<{ key: string; value: string; count: number; revenue: number }>(
+  const rows = await all<{ key: string; value: string; count: number; revenue: number }>(
     `SELECT j.key AS key, CAST(j.value AS TEXT) AS value, COUNT(*) AS count, COALESCE(SUM(e.revenue), 0) AS revenue
      FROM events e JOIN sessions s ON s.id = e.session_id, json_each(e.props) j
      WHERE ${w.sql} AND e.name = ? AND e.props IS NOT NULL
@@ -153,7 +155,7 @@ export function eventProperties(ctx: QueryContext, name: string) {
     const list = (out[r.key] ??= []);
     if (list.length < 10) list.push({ value: r.value, count: r.count, revenue: r.revenue });
   }
-  const trend = all<{ bucket: string; count: number }>(
+  const trend = await all<{ bucket: string; count: number }>(
     `SELECT ${bucketExpr(ctx, "e.ts")} AS bucket, COUNT(*) AS count
      FROM events e JOIN sessions s ON s.id = e.session_id
      WHERE ${w.sql} AND e.name = ? GROUP BY bucket`,
@@ -166,43 +168,47 @@ export function eventProperties(ctx: QueryContext, name: string) {
 // ---------------------------------------------------------------------------------------------
 // Realtime
 
-export function realtime(siteId: string) {
+export async function realtime(siteId: string) {
   const now = Date.now();
   const five = now - 5 * 60_000;
   const thirty = now - 30 * 60_000;
-  const active = one<{ n: number }>("SELECT COUNT(DISTINCT visitor_id) AS n FROM sessions WHERE site_id = ? AND last_seen >= ?", [siteId, five]).n;
-  // Bucket by whole minutes ago (0 = the current minute). Bound numbers arrive as REAL, hence the CAST.
-  const perMinute = all<{ ago: number; views: number; visitors: number }>(
-    `SELECT CAST((? - ts) / 60000 AS INTEGER) AS ago, SUM(type = 'pageview') AS views, COUNT(DISTINCT visitor_id) AS visitors
-     FROM events WHERE site_id = ? AND ts > ? AND ts <= ? GROUP BY ago`,
-    [now, siteId, thirty, now],
-  );
+  // Polled every few seconds, so its six queries run side by side.
+  const [activeRow, perMinute, pagesNow, sourcesNow, countriesNow, feed] = await Promise.all([
+    one<{ n: number }>("SELECT COUNT(DISTINCT visitor_id) AS n FROM sessions WHERE site_id = ? AND last_seen >= ?", [siteId, five]),
+    // Bucket by whole minutes ago (0 = the current minute). Bound numbers arrive as REAL, hence the CAST.
+    all<{ ago: number; views: number; visitors: number }>(
+      `SELECT CAST((? - ts) / 60000 AS INTEGER) AS ago, SUM(type = 'pageview') AS views, COUNT(DISTINCT visitor_id) AS visitors
+       FROM events WHERE site_id = ? AND ts > ? AND ts <= ? GROUP BY ago`,
+      [now, siteId, thirty, now],
+    ),
+    all<{ value: string; visitors: number }>(
+      `SELECT path AS value, COUNT(DISTINCT visitor_id) AS visitors FROM events
+       WHERE site_id = ? AND ts >= ? AND type = 'pageview' GROUP BY path ORDER BY visitors DESC LIMIT 10`,
+      [siteId, five],
+    ),
+    all<{ value: string; visitors: number }>(
+      `SELECT channel AS value, COUNT(DISTINCT visitor_id) AS visitors FROM sessions
+       WHERE site_id = ? AND last_seen >= ? GROUP BY channel ORDER BY visitors DESC LIMIT 8`,
+      [siteId, five],
+    ),
+    all<{ value: string; visitors: number }>(
+      `SELECT COALESCE(country, '(none)') AS value, COUNT(DISTINCT visitor_id) AS visitors FROM sessions
+       WHERE site_id = ? AND last_seen >= ? GROUP BY country ORDER BY visitors DESC LIMIT 8`,
+      [siteId, five],
+    ),
+    all<Record<string, unknown>>(
+      `SELECT e.ts, e.type, e.name, e.path, e.revenue, s.country, s.device, s.browser, s.channel
+       FROM events e JOIN sessions s ON s.id = e.session_id
+       WHERE e.site_id = ? AND e.ts >= ? AND e.type IN ('pageview', 'event', 'error')
+       ORDER BY e.ts DESC LIMIT 40`,
+      [siteId, thirty],
+    ),
+  ]);
+  const active = activeRow.n;
   const minutes = Array.from({ length: 30 }, (_, i) => {
     const r = perMinute.find((p) => p.ago === 29 - i);
     return { label: i === 29 ? "now" : `-${29 - i}m`, views: r?.views ?? 0, visitors: r?.visitors ?? 0 };
   });
-  const pagesNow = all<{ value: string; visitors: number }>(
-    `SELECT path AS value, COUNT(DISTINCT visitor_id) AS visitors FROM events
-     WHERE site_id = ? AND ts >= ? AND type = 'pageview' GROUP BY path ORDER BY visitors DESC LIMIT 10`,
-    [siteId, five],
-  );
-  const sourcesNow = all<{ value: string; visitors: number }>(
-    `SELECT channel AS value, COUNT(DISTINCT visitor_id) AS visitors FROM sessions
-     WHERE site_id = ? AND last_seen >= ? GROUP BY channel ORDER BY visitors DESC LIMIT 8`,
-    [siteId, five],
-  );
-  const countriesNow = all<{ value: string; visitors: number }>(
-    `SELECT COALESCE(country, '(none)') AS value, COUNT(DISTINCT visitor_id) AS visitors FROM sessions
-     WHERE site_id = ? AND last_seen >= ? GROUP BY country ORDER BY visitors DESC LIMIT 8`,
-    [siteId, five],
-  );
-  const feed = all<Record<string, unknown>>(
-    `SELECT e.ts, e.type, e.name, e.path, e.revenue, s.country, s.device, s.browser, s.channel
-     FROM events e JOIN sessions s ON s.id = e.session_id
-     WHERE e.site_id = ? AND e.ts >= ? AND e.type IN ('pageview', 'event', 'error')
-     ORDER BY e.ts DESC LIMIT 40`,
-    [siteId, thirty],
-  );
   return { active, minutes, pagesNow, sourcesNow, countriesNow, feed, at: now };
 }
 
@@ -211,10 +217,10 @@ export function realtime(siteId: string) {
 
 export type FunnelStep = { label: string; kind: "page" | "event"; match: string };
 
-export function funnel(ctx: QueryContext, steps: FunnelStep[], breakdownDim?: SessionDimension) {
+export async function funnel(ctx: QueryContext, steps: FunnelStep[], breakdownDim?: SessionDimension) {
   if (steps.length < 2 || steps.length > 8) throw new QueryError("a funnel needs 2 to 8 steps");
   const w = sessionWhere(ctx);
-  const args: unknown[] = [...w.args];
+  const args: InValue[] = [...w.args];
   const cond = (st: FunnelStep) => {
     args.push(st.match);
     return st.kind === "page" ? "e.type = 'pageview' AND e.path GLOB ?" : "e.type = 'event' AND e.name = ?";
@@ -228,7 +234,7 @@ export function funnel(ctx: QueryContext, steps: FunnelStep[], breakdownDim?: Se
   }
   const selects = steps.map((_, i) => `(SELECT COUNT(*) FROM s${i + 1}) AS c${i + 1}`);
   const times = steps.slice(1).map((_, i) => `(SELECT AVG(b.t - a.t) FROM s${i + 2} b JOIN s${i + 1} a ON a.sid = b.sid) AS t${i + 2}`);
-  const row = one<Record<string, number | null>>(`WITH ${ctes.join(",\n")} SELECT ${[...selects, ...times].join(", ")}`, args);
+  const row = await one<Record<string, number | null>>(`WITH ${ctes.join(",\n")} SELECT ${[...selects, ...times].join(", ")}`, args);
 
   const result = steps.map((st, i) => {
     const count = row[`c${i + 1}`] ?? 0;
@@ -248,7 +254,7 @@ export function funnel(ctx: QueryContext, steps: FunnelStep[], breakdownDim?: Se
   if (breakdownDim && breakdownDim in SESSION_DIMENSIONS) {
     const col = SESSION_DIMENSIONS[breakdownDim];
     const last = `s${steps.length}`;
-    segments = all<{ value: string; entered: number; completed: number; rate: number }>(
+    segments = await all<{ value: string; entered: number; completed: number; rate: number }>(
       `WITH ${ctes.join(",\n")}
        SELECT COALESCE(s.${col}, '(none)') AS value, COUNT(*) AS entered, COUNT(l.sid) AS completed, COUNT(l.sid) * 1.0 / COUNT(*) AS rate
        FROM s1 JOIN sessions s ON s.id = s1.sid LEFT JOIN ${last} l ON l.sid = s1.sid
@@ -262,13 +268,15 @@ export function funnel(ctx: QueryContext, steps: FunnelStep[], breakdownDim?: Se
 // ---------------------------------------------------------------------------------------------
 // Paths: what people do before and after a page
 
-export function paths(ctx: QueryContext, start?: string) {
+export async function paths(ctx: QueryContext, start?: string) {
   const w = sessionWhere(ctx);
   const startPage =
     start ||
-    one<{ path: string } | undefined>(
-      `SELECT s.entry_page AS path FROM sessions s WHERE ${w.sql} GROUP BY s.entry_page ORDER BY COUNT(*) DESC LIMIT 1`,
-      w.args,
+    (
+      await one<{ path: string } | undefined>(
+        `SELECT s.entry_page AS path FROM sessions s WHERE ${w.sql} GROUP BY s.entry_page ORDER BY COUNT(*) DESC LIMIT 1`,
+        w.args,
+      )
     )?.path ||
     "/";
   const seq = `WITH base AS (SELECT s.id FROM sessions s WHERE ${w.sql}),
@@ -279,16 +287,16 @@ export function paths(ctx: QueryContext, start?: string) {
              LEAD(e.path, 2) OVER (PARTITION BY e.session_id ORDER BY e.ts) AS next2
       FROM events e JOIN base b ON b.id = e.session_id WHERE e.type = 'pageview'
     )`;
-  const flows = all<{ next1: string; next2: string; n: number }>(
+  const flows = await all<{ next1: string; next2: string; n: number }>(
     `${seq} SELECT COALESCE(next1, '(exit)') AS next1, COALESCE(next2, CASE WHEN next1 IS NULL THEN NULL ELSE '(exit)' END) AS next2, COUNT(*) AS n
      FROM pv WHERE path = ? GROUP BY next1, next2 ORDER BY n DESC`,
     [...w.args, startPage],
   );
-  const before = all<{ value: string; n: number }>(
+  const before = await all<{ value: string; n: number }>(
     `${seq} SELECT COALESCE(prev, '(entrance)') AS value, COUNT(*) AS n FROM pv WHERE path = ? GROUP BY prev ORDER BY n DESC LIMIT 8`,
     [...w.args, startPage],
   );
-  const journeys = all<{ journey: string; n: number }>(
+  const journeys = await all<{ journey: string; n: number }>(
     `WITH base AS (SELECT s.id FROM sessions s WHERE ${w.sql}),
      numbered AS (
        SELECT e.session_id, e.path, ROW_NUMBER() OVER (PARTITION BY e.session_id ORDER BY e.ts) AS rn
@@ -316,13 +324,13 @@ export function paths(ctx: QueryContext, start?: string) {
 const WEEK = 7 * 86_400_000;
 const MONDAY_SHIFT = 3 * 86_400_000; // 1 Jan 1970 was a Thursday
 
-export function cohorts(ctx: QueryContext, weeks = 8) {
+export async function cohorts(ctx: QueryContext, weeks = 8) {
   const off = Math.trunc(ctx.offsetMs);
   const end = ctx.end;
   const firstWeek = Math.floor((end - 1 + off + MONDAY_SHIFT) / WEEK) - weeks + 1;
   const start = firstWeek * WEEK - MONDAY_SHIFT - off;
   const wk = (col: string) => `CAST((${col} + ${off} + ${MONDAY_SHIFT}) / ${WEEK} AS INTEGER)`;
-  const rows = all<{ cohort: number; offset: number; visitors: number }>(
+  const rows = await all<{ cohort: number; offset: number; visitors: number }>(
     // One pass: every session in the window, tagged with its visitor's first-visit week. The
     // visitor index turns the MIN() into a seek, so this stays linear in the number of sessions.
     `WITH tagged AS (
@@ -361,9 +369,9 @@ export function cohorts(ctx: QueryContext, weeks = 8) {
 // ---------------------------------------------------------------------------------------------
 // E-commerce and goals
 
-export function ecommerce(ctx: QueryContext) {
+export async function ecommerce(ctx: QueryContext) {
   const w = sessionWhere(ctx);
-  const totals = one<{ revenue: number; orders: number; buyers: number; sessions: number; carts: number; checkouts: number; cart_buyers: number }>(
+  const totals = await one<{ revenue: number; orders: number; buyers: number; sessions: number; carts: number; checkouts: number; cart_buyers: number }>(
     `WITH base AS (SELECT s.id, s.visitor_id FROM sessions s WHERE ${w.sql}),
      ev AS (SELECT e.session_id, e.name, e.revenue FROM events e JOIN base b ON b.id = e.session_id WHERE e.type = 'event' AND e.name IN ('purchase', 'add_to_cart', 'begin_checkout'))
      SELECT
@@ -376,13 +384,13 @@ export function ecommerce(ctx: QueryContext) {
        (SELECT COUNT(DISTINCT a.session_id) FROM ev a JOIN ev p ON p.session_id = a.session_id AND p.name = 'purchase' WHERE a.name = 'add_to_cart') AS cart_buyers`,
     w.args,
   );
-  const trend = all<{ bucket: string; revenue: number; orders: number }>(
+  const trend = await all<{ bucket: string; revenue: number; orders: number }>(
     `SELECT ${bucketExpr(ctx, "e.ts")} AS bucket, COALESCE(SUM(e.revenue), 0) AS revenue, COUNT(*) AS orders
      FROM events e JOIN sessions s ON s.id = e.session_id WHERE ${w.sql} AND e.name = 'purchase' GROUP BY bucket`,
     w.args,
   );
   const byBucket = new Map(trend.map((t) => [t.bucket, t]));
-  const products = all<{ value: string; added: number; purchased: number; revenue: number }>(
+  const products = await all<{ value: string; added: number; purchased: number; revenue: number }>(
     `SELECT json_extract(e.props, '$.item') AS value,
             SUM(e.name = 'add_to_cart') AS added, SUM(e.name = 'purchase') AS purchased,
             COALESCE(SUM(CASE WHEN e.name = 'purchase' THEN e.revenue END), 0) AS revenue
@@ -391,7 +399,7 @@ export function ecommerce(ctx: QueryContext) {
      GROUP BY value ORDER BY revenue DESC, added DESC LIMIT 15`,
     w.args,
   );
-  const byChannel = all<{ value: string; revenue: number; orders: number; sessions: number }>(
+  const byChannel = await all<{ value: string; revenue: number; orders: number; sessions: number }>(
     `SELECT s.channel AS value, SUM(s.revenue) AS revenue, SUM(s.revenue > 0) AS orders, COUNT(*) AS sessions
      FROM sessions s WHERE ${w.sql} GROUP BY s.channel ORDER BY revenue DESC`,
     w.args,
@@ -410,12 +418,12 @@ export function ecommerce(ctx: QueryContext) {
   };
 }
 
-export function goals(ctx: QueryContext) {
+export async function goals(ctx: QueryContext) {
   const w = sessionWhere(ctx);
-  const defs = all<{ id: number; name: string; kind: string; match: string; value: number }>("SELECT * FROM goals WHERE site_id = ? ORDER BY id", [ctx.site.id]);
-  const sessions = one<{ n: number }>(`SELECT COUNT(*) AS n FROM sessions s WHERE ${w.sql}`, w.args).n;
-  return defs.map((g) => {
-    const r = one<{ completions: number; sessions: number; visitors: number; revenue: number }>(
+  const defs = await all<{ id: number; name: string; kind: string; match: string; value: number }>("SELECT * FROM goals WHERE site_id = ? ORDER BY id", [ctx.site.id]);
+  const sessions = (await one<{ n: number }>(`SELECT COUNT(*) AS n FROM sessions s WHERE ${w.sql}`, w.args)).n;
+  return Promise.all(defs.map(async (g) => {
+    const r = await one<{ completions: number; sessions: number; visitors: number; revenue: number }>(
       g.kind === "page"
         ? `SELECT COUNT(*) AS completions, COUNT(DISTINCT e.session_id) AS sessions, COUNT(DISTINCT e.visitor_id) AS visitors, 0 AS revenue
            FROM events e JOIN sessions s ON s.id = e.session_id WHERE ${w.sql} AND e.type = 'pageview' AND e.path GLOB ?`
@@ -424,7 +432,7 @@ export function goals(ctx: QueryContext) {
       [...w.args, g.match],
     );
     return { ...g, ...r, rate: sessions ? r.sessions / sessions : 0, worth: r.revenue || r.completions * g.value };
-  });
+  }));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -456,14 +464,14 @@ const EXPLORE_METRICS: Record<string, string> = {
 
 export const EXPLORE = { dims: Object.keys(EXPLORE_DIMS), metrics: Object.keys(EXPLORE_METRICS) };
 
-export function explore(ctx: QueryContext, dims: string[], metrics: string[], sort?: string, limit = 200) {
+export async function explore(ctx: QueryContext, dims: string[], metrics: string[], sort?: string, limit = 200) {
   const d = dims.filter((x) => x in EXPLORE_DIMS).slice(0, 3);
   const m = metrics.filter((x) => x in EXPLORE_METRICS).slice(0, 8);
   if (!d.length || !m.length) throw new QueryError("pick at least one dimension and one metric");
   const w = sessionWhere(ctx);
   const orderBy = sort && m.includes(sort) ? sort : d[0] === "date" || d[0] === "week" || d[0] === "hour_of_day" || d[0] === "day_of_week" ? d[0] : m[0];
   const dir = orderBy === d[0] && d[0] in { date: 1, week: 1, hour_of_day: 1, day_of_week: 1 } ? "ASC" : "DESC";
-  const rows = all<Record<string, string | number>>(
+  const rows = await all<Record<string, string | number>>(
     `SELECT ${d.map((x) => `${EXPLORE_DIMS[x](ctx)} AS ${x}`).join(", ")}, ${m.map((x) => `COALESCE(${EXPLORE_METRICS[x]}, 0) AS ${x}`).join(", ")}
      FROM sessions s WHERE ${w.sql} GROUP BY ${d.map((_, i) => i + 1).join(", ")} ORDER BY ${orderBy} ${dir} LIMIT ?`,
     [...w.args, Math.min(limit, 1000)],
@@ -474,19 +482,19 @@ export function explore(ctx: QueryContext, dims: string[], metrics: string[], so
 // ---------------------------------------------------------------------------------------------
 // Heatmaps and scroll depth
 
-export function heatmap(ctx: QueryContext, path: string, device: "desktop" | "mobile") {
+export async function heatmap(ctx: QueryContext, path: string, device: "desktop" | "mobile") {
   const vw = device === "mobile" ? "c.vw < 768" : "c.vw >= 768";
-  const clicks = all<{ x: number; y: number; rage: number; dead: number }>(
+  const clicks = await all<{ x: number; y: number; rage: number; dead: number }>(
     `SELECT c.x, c.y, c.rage, c.dead FROM clicks c WHERE c.site_id = ? AND c.path = ? AND c.ts >= ? AND c.ts < ? AND ${vw} LIMIT 30000`,
     [ctx.site.id, path, ctx.start, ctx.end],
   );
-  const selectors = all<{ selector: string; clicks: number; rage: number; dead: number }>(
+  const selectors = await all<{ selector: string; clicks: number; rage: number; dead: number }>(
     `SELECT COALESCE(c.selector, '(unknown)') AS selector, COUNT(*) AS clicks, SUM(c.rage) AS rage, SUM(c.dead) AS dead
      FROM clicks c WHERE c.site_id = ? AND c.path = ? AND c.ts >= ? AND c.ts < ? AND ${vw}
      GROUP BY c.selector ORDER BY clicks DESC LIMIT 12`,
     [ctx.site.id, path, ctx.start, ctx.end],
   );
-  const depths = all<{ sd: number }>(
+  const depths = await all<{ sd: number }>(
     `SELECT CAST(json_extract(e.props, '$.sd') AS INTEGER) AS sd FROM events e
      WHERE e.site_id = ? AND e.path = ? AND e.ts >= ? AND e.ts < ? AND e.type = 'page_leave' AND json_extract(e.props, '$.sd') IS NOT NULL`,
     [ctx.site.id, path, ctx.start, ctx.end],
@@ -495,7 +503,7 @@ export function heatmap(ctx: QueryContext, path: string, device: "desktop" | "mo
     depth: i * 10,
     reached: depths.length ? depths.filter((d) => d.sd >= i * 10).length / depths.length : 0,
   }));
-  const pageList = all<{ path: string; clicks: number }>(
+  const pageList = await all<{ path: string; clicks: number }>(
     `SELECT path, COUNT(*) AS clicks FROM clicks WHERE site_id = ? AND ts >= ? AND ts < ? GROUP BY path ORDER BY clicks DESC LIMIT 30`,
     [ctx.site.id, ctx.start, ctx.end],
   );
@@ -505,16 +513,16 @@ export function heatmap(ctx: QueryContext, path: string, device: "desktop" | "mo
 // ---------------------------------------------------------------------------------------------
 // Session recordings
 
-export function recordings(ctx: QueryContext, opts: { frustrated?: boolean; path?: string } = {}) {
+export async function recordings(ctx: QueryContext, opts: { frustrated?: boolean; path?: string } = {}) {
   const w = sessionWhere(ctx);
   const extra: string[] = [];
-  const args: unknown[] = [...w.args];
+  const args: InValue[] = [...w.args];
   if (opts.frustrated) extra.push("(r.rage_clicks > 0 OR r.errors > 0)");
   if (opts.path) {
     extra.push("r.path = ?");
     args.push(opts.path);
   }
-  return all<Record<string, unknown>>(
+  return await all<Record<string, unknown>>(
     `SELECT r.id, r.path, r.started_at, r.last_at, (r.last_at - r.started_at) AS duration, r.clicks, r.rage_clicks, r.errors, r.bytes,
             s.country, s.device, s.browser, s.os, s.channel, s.pageviews, s.revenue
      FROM recordings r JOIN sessions s ON s.id = r.session_id
@@ -524,18 +532,18 @@ export function recordings(ctx: QueryContext, opts: { frustrated?: boolean; path
   );
 }
 
-export function recording(siteId: string, id: string) {
-  const meta = one<Record<string, unknown> | undefined>(
+export async function recording(siteId: string, id: string) {
+  const meta = await one<({ session_id: string; started_at: number; last_at: number } & Record<string, unknown>) | undefined>(
     `SELECT r.*, s.country, s.device, s.browser, s.os, s.channel, s.entry_page, s.referrer_domain
      FROM recordings r JOIN sessions s ON s.id = r.session_id WHERE r.site_id = ? AND r.id = ?`,
     [siteId, id],
   );
   if (!meta) throw new QueryError("recording not found", 404);
-  const chunks = all<{ data: Buffer }>("SELECT data FROM recording_chunks WHERE recording_id = ? ORDER BY seq", [id]);
-  const events = chunks.flatMap((c) => JSON.parse(zlib.gunzipSync(c.data).toString("utf8")) as unknown[]);
-  const timeline = all<{ ts: number; type: string; name: string; path: string }>(
+  const chunks = await all<{ data: ArrayBuffer }>("SELECT data FROM recording_chunks WHERE recording_id = ? ORDER BY seq", [id]);
+  const events = chunks.flatMap((c) => JSON.parse(zlib.gunzipSync(Buffer.from(c.data)).toString("utf8")) as unknown[]);
+  const timeline = await all<{ ts: number; type: string; name: string; path: string }>(
     "SELECT ts, type, name, path FROM events WHERE session_id = ? AND ts >= ? AND ts <= ? AND type IN ('pageview', 'event', 'error') ORDER BY ts",
-    [meta.session_id, meta.started_at, (meta.last_at as number) + 1000],
+    [meta.session_id, meta.started_at, meta.last_at + 1000],
   );
   return { meta, events, timeline };
 }

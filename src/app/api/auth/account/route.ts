@@ -10,12 +10,12 @@ const Patch = z.object({
 
 export async function PATCH(request: Request) {
   try {
-    const user = currentUser(request);
+    const user = await currentUser(request);
     if (!user) throw new AuthError("Sign in first", 401);
     const body = Patch.parse(await request.json());
-    if (body.name) updateUser(user.id, { name: body.name });
+    if (body.name) await updateUser(user.id, { name: body.name });
     if (body.newPassword) await changePassword(user.id, body.currentPassword ?? "", body.newPassword);
-    return Response.json({ user: currentUser(request) });
+    return Response.json({ user: await currentUser(request) });
   } catch (err) {
     return authError(err);
   }
