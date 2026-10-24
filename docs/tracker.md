@@ -94,6 +94,7 @@ with no deploy.
   on the server before storage.
 - **Consent.** Per site: not required, required for visitors in the EU/EEA/UK/Switzerland, or required for everyone. The
   visitor's region comes from a CDN country header or, failing that, the browser's time zone.
-- **Do Not Track and Global Privacy Control** are honoured unless you turn that off.
+- **Do Not Track and Global Privacy Control** are ignored by default. Turn on "Honour Do Not Track" in site settings to
+  stop counting visitors who send either signal.
 - **Recordings** mask every input value by default. Add `class="optic-block"` to keep an element out of recordings
   entirely, or `class="optic-mask"` to mask its text.

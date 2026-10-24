@@ -14,7 +14,7 @@
   // Heatmap previews load the page inside the dashboard; they must not count as visits.
   if (/[?&]optic_preview=1/.test(loc.search)) { w.optic = function () {}; return; }
 
-  var cfg = { identity: "cookieless", respectDnt: true, consentRequired: script.getAttribute("data-consent") === "required", heatmaps: true, replay: { enabled: false }, stripParams: [], tags: [] };
+  var cfg = { identity: "cookieless", respectDnt: false, consentRequired: script.getAttribute("data-consent") === "required", heatmaps: true, replay: { enabled: false }, stripParams: [], tags: [] };
   var stubQueue = (w.optic && w.optic.q) || [];
   var queue = [], userId = null, clientId = null, ready = false, disabled = false;
   var consent = readConsent();
