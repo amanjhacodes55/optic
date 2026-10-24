@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono&display=block" />
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: grid; place-items: center; overflow: hidden;
+    background: radial-gradient(ellipse at 30% 35%, #1d2733 0%, #121314 55%, #0b0b0b 100%);
+    color: #f0efec; font-family: "Geist", sans-serif;
+  }
+  .wrap { text-align: center; }
+  .wrap > * { opacity: 0; transform: translateY(14px); transition: opacity .8s ease, transform .8s ease; }
+  body.in .wrap > * { opacity: 1; transform: none; }
+  body.in .wrap > :nth-child(2) { transition-delay: .15s; }
+  body.in .wrap > :nth-child(3) { transition-delay: .35s; }
+  body.in .wrap > :nth-child(4) { transition-delay: .55s; }
+  .brand { display: inline-flex; align-items: center; gap: 22px; }
+  .brand svg { width: 88px; height: 88px; }
+  h1 { margin: 0; font: 600 88px/1 "Geist", sans-serif; letter-spacing: -2.5px; }
+  .tag { margin: 26px 0 0; font-size: 30px; font-weight: 500; color: #c3c2b7; }
+  .rule { width: 90px; height: 4px; border-radius: 2px; background: #3987e5; margin: 30px auto; }
+  .links { font-size: 22px; line-height: 1.8; color: #a3a29a; }
+  .links b { color: #fff; font-weight: 500; font-family: "Geist Mono", monospace; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#f0efec" /><circle cx="16" cy="16" r="8.5" fill="none" stroke="#0d0d0d" stroke-width="2.5" /><circle cx="16" cy="16" r="3.2" fill="#3987e5" /></svg>
+      <h1>Optic</h1>
+    </div>
+    <p class="tag">Open-source web analytics · MIT licensed</p>
+    <div class="rule"></div>
+    <div class="links">
+      <div><b>github.com/amanjhacodes55/optic</b></div>
+      <div>Self-host with Docker, or deploy to Netlify with Turso</div>
+    </div>
+  </div>
+</body>
+</html>
