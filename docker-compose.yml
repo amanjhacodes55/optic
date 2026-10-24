@@ -1,0 +1,17 @@
+services:
+  optic:
+    build: .
+    image: optic:latest
+    ports:
+      - "3000:3000"
+    environment:
+      OPTIC_PASSWORD: ${OPTIC_PASSWORD:-change-me}
+      OPTIC_SECRET: ${OPTIC_SECRET:-}
+      # Set to 1 to load the Northwind Coffee demo data on first start.
+      OPTIC_SEED_DEMO: ${OPTIC_SEED_DEMO:-0}
+    volumes:
+      - optic-data:/data
+    restart: unless-stopped
+
+volumes:
+  optic-data:

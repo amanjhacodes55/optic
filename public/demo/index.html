@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Northwind Coffee — demo shop for Optic</title>
+  <link rel="stylesheet" href="/demo/shop.css" />
+  <script>window.optic = window.optic || function () { (window.optic.q = window.optic.q || []).push(arguments); };</script>
+  <script defer src="/optic.js" data-site="demo"></script>
+  <script defer src="/demo/shop.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a href="/demo" class="brand" data-link>☕ Northwind Coffee</a>
+    <nav>
+      <a href="/demo/shop" data-link>Shop</a>
+      <a href="/demo/brewing-guide" data-link>Brewing guide</a>
+      <a href="/demo/about" data-link>About</a>
+      <a href="/demo/cart" data-link class="cart-link" id="cart-link">Cart <span id="cart-count">0</span></a>
+    </nav>
+  </header>
+  <main id="app"></main>
+  <footer class="foot">
+    <form id="newsletter" class="newsletter" onsubmit="event.preventDefault(); this.innerHTML = '<p>Thanks! Check your inbox.</p>';">
+      <label for="nl-email">Fresh roasts, once a month</label>
+      <div class="row"><input id="nl-email" type="email" placeholder="you@example.com" required /><button type="submit">Subscribe</button></div>
+    </form>
+    <p class="fine">This is a demo shop. Nothing is for sale; it exists so <a href="/">Optic</a> has real pages to measure.</p>
+  </footer>
+</body>
+</html>

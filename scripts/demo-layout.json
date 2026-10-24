@@ -1,0 +1,1590 @@
+{
+ "desktop": {
+  "/demo": {
+   "boxes": [
+    {
+     "selector": "#hero-shop",
+     "x": 112,
+     "y": 466.953125,
+     "w": 136.953125,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".hero .btn.secondary",
+     "x": 258.953125,
+     "y": 465.953125,
+     "w": 146.59375,
+     "h": 52.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 112,
+     "y": 705.015625,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 472,
+     "y": 705.015625,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 832,
+     "y": 705.015625,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 1421.171875,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 1421.171875,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".hero .art",
+     "x": 710.796875,
+     "y": 130.4375,
+     "w": 457.1875,
+     "h": 457.1875,
+     "interactive": false
+    },
+    {
+     "selector": ".features div",
+     "x": 112,
+     "y": 1133.890625,
+     "w": 336,
+     "h": 124.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".features div",
+     "x": 472,
+     "y": 1133.890625,
+     "w": 336,
+     "h": 124.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".features div",
+     "x": 832,
+     "y": 1133.890625,
+     "w": 336,
+     "h": 124.390625,
+     "interactive": false
+    }
+   ],
+   "height": 1574,
+   "width": 1280
+  },
+  "/demo/shop": {
+   "boxes": [
+    {
+     "selector": ".card",
+     "x": 112,
+     "y": 151.828125,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 472,
+     "y": 151.828125,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 832,
+     "y": 149.828125,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 112,
+     "y": 548.703125,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 472,
+     "y": 548.703125,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 832,
+     "y": 548.703125,
+     "w": 336,
+     "h": 372.875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 1028.46875,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 1028.46875,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 1181,
+   "width": 1280
+  },
+  "/demo/product/colombia-huila": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#add-to-cart",
+     "x": 664,
+     "y": 421.703125,
+     "w": 504,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#qty",
+     "x": 700.4375,
+     "y": 353.703125,
+     "w": 52,
+     "h": 46,
+     "interactive": true
+    },
+    {
+     "selector": "#grind",
+     "x": 762.4375,
+     "y": 353.703125,
+     "w": 154,
+     "h": 46,
+     "interactive": true
+    },
+    {
+     "selector": ".notes span",
+     "x": 664,
+     "y": 236.421875,
+     "w": 118.5,
+     "h": 29.6875,
+     "interactive": false
+    },
+    {
+     "selector": ".notes span",
+     "x": 790.5,
+     "y": 236.421875,
+     "w": 89.4375,
+     "h": 29.6875,
+     "interactive": false
+    },
+    {
+     "selector": ".notes span",
+     "x": 887.9375,
+     "y": 236.421875,
+     "w": 78.65625,
+     "h": 29.6875,
+     "interactive": false
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 701.328125,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 701.328125,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".product .art",
+     "x": 112,
+     "y": 90.4375,
+     "w": 504,
+     "h": 504,
+     "interactive": false
+    }
+   ],
+   "height": 854,
+   "width": 1280
+  },
+  "/demo/cart": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#apply-coupon",
+     "x": 1067.71875,
+     "y": 305.828125,
+     "w": 77.28125,
+     "h": 48.796875,
+     "interactive": false
+    },
+    {
+     "selector": "#coupon",
+     "x": 771,
+     "y": 305.828125,
+     "w": 288.71875,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-btn",
+     "x": 771,
+     "y": 442.21875,
+     "w": 374,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".remove",
+     "x": 1078.125,
+     "y": 178.421875,
+     "w": 89.875,
+     "h": 38.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 693.328125,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 693.328125,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 846,
+   "width": 1280
+  },
+  "/demo/checkout": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#pay",
+     "x": 112,
+     "y": 604.25,
+     "w": 609.59375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 112,
+     "y": 179.515625,
+     "w": 609.59375,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 112,
+     "y": 270,
+     "w": 297.796875,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 423.796875,
+     "y": 270,
+     "w": 297.796875,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 112,
+     "y": 360.484375,
+     "w": 609.59375,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 112,
+     "y": 450.96875,
+     "w": 297.796875,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 423.796875,
+     "y": 450.96875,
+     "w": 297.796875,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 112,
+     "y": 541.453125,
+     "w": 609.59375,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 761.9375,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 761.9375,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 914,
+   "width": 1280
+  },
+  "/demo/thank-you": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 693.328125,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 693.328125,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 846,
+   "width": 1280
+  },
+  "/demo/brewing-guide": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#download-guide",
+     "x": 112,
+     "y": 714.96875,
+     "w": 364.140625,
+     "h": 53.890625,
+     "interactive": true
+    },
+    {
+     "selector": "#wiki-link",
+     "x": 361.671875,
+     "y": 787.859375,
+     "w": 327.53125,
+     "h": 24,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 939.640625,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 939.640625,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".article p",
+     "x": 112,
+     "y": 211.78125,
+     "w": 720,
+     "h": 55.78125,
+     "interactive": false
+    },
+    {
+     "selector": ".article p",
+     "x": 112,
+     "y": 714.96875,
+     "w": 720,
+     "h": 53.890625,
+     "interactive": false
+    },
+    {
+     "selector": ".article p",
+     "x": 112,
+     "y": 786.859375,
+     "w": 720,
+     "h": 27.890625,
+     "interactive": false
+    },
+    {
+     "selector": ".article h2",
+     "x": 112,
+     "y": 285.5625,
+     "w": 720,
+     "h": 43.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".article h2",
+     "x": 112,
+     "y": 446.625,
+     "w": 720,
+     "h": 43.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".article h2",
+     "x": 112,
+     "y": 607.6875,
+     "w": 720,
+     "h": 43.390625,
+     "interactive": false
+    }
+   ],
+   "height": 1092,
+   "width": 1280
+  },
+  "/demo/about": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 946.28125,
+     "y": 17.09375,
+     "w": 35.8125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1004.09375,
+     "y": 17.09375,
+     "w": 101.921875,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1128.015625,
+     "y": 17.09375,
+     "w": 42.578125,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 1192.59375,
+     "y": 17.09375,
+     "w": 55.40625,
+     "h": 23.25,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 32,
+     "y": 14,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#roastery-video",
+     "x": 112,
+     "y": 291.5625,
+     "w": 720,
+     "h": 405,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 410,
+     "y": 901.234375,
+     "w": 334.625,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 752.625,
+     "y": 901.234375,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".article p",
+     "x": 112,
+     "y": 211.78125,
+     "w": 720,
+     "h": 55.78125,
+     "interactive": false
+    },
+    {
+     "selector": ".article p",
+     "x": 112,
+     "y": 720.5625,
+     "w": 720,
+     "h": 55.78125,
+     "interactive": false
+    }
+   ],
+   "height": 1054,
+   "width": 1280
+  }
+ },
+ "mobile": {
+  "/demo": {
+   "boxes": [
+    {
+     "selector": "#hero-shop",
+     "x": 16,
+     "y": 331.703125,
+     "w": 136.953125,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".hero .btn.secondary",
+     "x": 162.953125,
+     "y": 330.703125,
+     "w": 146.59375,
+     "h": 52.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 882.890625,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 1296.265625,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 1709.640625,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 2702.28125,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 2702.28125,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".hero .art",
+     "x": 16,
+     "y": 407.5,
+     "w": 358,
+     "h": 358,
+     "interactive": false
+    },
+    {
+     "selector": ".features div",
+     "x": 16,
+     "y": 2155.015625,
+     "w": 358,
+     "h": 124.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".features div",
+     "x": 16,
+     "y": 2303.40625,
+     "w": 358,
+     "h": 124.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".features div",
+     "x": 16,
+     "y": 2451.796875,
+     "w": 358,
+     "h": 99.59375,
+     "interactive": false
+    }
+   ],
+   "height": 2876,
+   "width": 418
+  },
+  "/demo/shop": {
+   "boxes": [
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 135.828125,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 547.203125,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 962.578125,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 1375.953125,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 1789.328125,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".card",
+     "x": 16,
+     "y": 2202.703125,
+     "w": 358,
+     "h": 389.375,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 2686.96875,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 2686.96875,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 2861,
+   "width": 418
+  },
+  "/demo/product/colombia-huila": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#add-to-cart",
+     "x": 16,
+     "y": 812.5,
+     "w": 358,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#qty",
+     "x": 52.4375,
+     "y": 744.5,
+     "w": 52,
+     "h": 46,
+     "interactive": true
+    },
+    {
+     "selector": "#grind",
+     "x": 114.4375,
+     "y": 744.5,
+     "w": 154,
+     "h": 46,
+     "interactive": true
+    },
+    {
+     "selector": ".notes span",
+     "x": 16,
+     "y": 602.421875,
+     "w": 118.5,
+     "h": 29.6875,
+     "interactive": false
+    },
+    {
+     "selector": ".notes span",
+     "x": 142.5,
+     "y": 602.421875,
+     "w": 89.4375,
+     "h": 29.6875,
+     "interactive": false
+    },
+    {
+     "selector": ".notes span",
+     "x": 239.9375,
+     "y": 602.421875,
+     "w": 78.65625,
+     "h": 29.6875,
+     "interactive": false
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 958.1875,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 958.1875,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".product .art",
+     "x": 16,
+     "y": 74.4375,
+     "w": 358,
+     "h": 358,
+     "interactive": false
+    }
+   ],
+   "height": 1132,
+   "width": 418
+  },
+  "/demo/cart": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#apply-coupon",
+     "x": 304,
+     "y": 300.21875,
+     "w": 77.28125,
+     "h": 48.796875,
+     "interactive": false
+    },
+    {
+     "selector": "#coupon",
+     "x": 39,
+     "y": 300.21875,
+     "w": 257,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-btn",
+     "x": 39,
+     "y": 436.609375,
+     "w": 312,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".remove",
+     "x": 284.125,
+     "y": 167.625,
+     "w": 89.875,
+     "h": 38.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 720.125,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 720.125,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 905,
+   "width": 418
+  },
+  "/demo/checkout": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#pay",
+     "x": 16,
+     "y": 797.21875,
+     "w": 358,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 16,
+     "y": 163.515625,
+     "w": 358,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 16,
+     "y": 254,
+     "w": 358,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 16,
+     "y": 358.484375,
+     "w": 358,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 16,
+     "y": 448.96875,
+     "w": 358,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 16,
+     "y": 539.453125,
+     "w": 358,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 16,
+     "y": 643.9375,
+     "w": 358,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#checkout-form input",
+     "x": 16,
+     "y": 734.421875,
+     "w": 358,
+     "h": 48.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 1074.5,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 1074.5,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 1249,
+   "width": 418
+  },
+  "/demo/thank-you": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 720.125,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 720.125,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    }
+   ],
+   "height": 905,
+   "width": 418
+  },
+  "/demo/brewing-guide": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#download-guide",
+     "x": 16,
+     "y": 819.84375,
+     "w": 358,
+     "h": 81.78125,
+     "interactive": true
+    },
+    {
+     "selector": "#wiki-link",
+     "x": 16,
+     "y": 920.625,
+     "w": 301.890625,
+     "h": 51.890625,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 1088.296875,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 1088.296875,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".article p",
+     "x": 16,
+     "y": 260.875,
+     "w": 358,
+     "h": 83.671875,
+     "interactive": false
+    },
+    {
+     "selector": ".article p",
+     "x": 16,
+     "y": 819.84375,
+     "w": 358,
+     "h": 81.78125,
+     "interactive": false
+    },
+    {
+     "selector": ".article p",
+     "x": 16,
+     "y": 919.625,
+     "w": 358,
+     "h": 55.78125,
+     "interactive": false
+    },
+    {
+     "selector": ".article h2",
+     "x": 16,
+     "y": 362.546875,
+     "w": 358,
+     "h": 43.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".article h2",
+     "x": 16,
+     "y": 551.5,
+     "w": 358,
+     "h": 43.390625,
+     "interactive": false
+    },
+    {
+     "selector": ".article h2",
+     "x": 16,
+     "y": 712.5625,
+     "w": 358,
+     "h": 43.390625,
+     "interactive": false
+    }
+   ],
+   "height": 1262,
+   "width": 418
+  },
+  "/demo/about": {
+   "boxes": [
+    {
+     "selector": ".top nav a",
+     "x": 275.390625,
+     "y": 15.875,
+     "w": 33.421875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".top nav a",
+     "x": 320.8125,
+     "y": 15.875,
+     "w": 53.1875,
+     "h": 21.6875,
+     "interactive": true
+    },
+    {
+     "selector": ".brand",
+     "x": 16,
+     "y": 12,
+     "w": 197.75,
+     "h": 29.4375,
+     "interactive": true
+    },
+    {
+     "selector": "#roastery-video",
+     "x": 16,
+     "y": 303.453125,
+     "w": 358,
+     "h": 201.375,
+     "interactive": true
+    },
+    {
+     "selector": "#nl-email",
+     "x": 32,
+     "y": 725.390625,
+     "w": 261,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": "#newsletter button",
+     "x": 301,
+     "y": 725.390625,
+     "w": 117.375,
+     "h": 50.796875,
+     "interactive": true
+    },
+    {
+     "selector": ".article p",
+     "x": 16,
+     "y": 195.78125,
+     "w": 358,
+     "h": 83.671875,
+     "interactive": false
+    },
+    {
+     "selector": ".article p",
+     "x": 16,
+     "y": 528.828125,
+     "w": 358,
+     "h": 83.671875,
+     "interactive": false
+    }
+   ],
+   "height": 905,
+   "width": 418
+  }
+ }
+}
