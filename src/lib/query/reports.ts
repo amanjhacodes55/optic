@@ -396,7 +396,7 @@ export async function ecommerce(ctx: QueryContext) {
             COALESCE(SUM(CASE WHEN e.name = 'purchase' THEN e.revenue END), 0) AS revenue
      FROM events e JOIN sessions s ON s.id = e.session_id
      WHERE ${w.sql} AND e.name IN ('add_to_cart', 'purchase') AND json_extract(e.props, '$.item') IS NOT NULL
-     GROUP BY value ORDER BY revenue DESC, added DESC LIMIT 15`,
+     GROUP BY 1 ORDER BY revenue DESC, added DESC LIMIT 15`,
     w.args,
   );
   const byChannel = await all<{ value: string; revenue: number; orders: number; sessions: number }>(

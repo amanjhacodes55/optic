@@ -34,7 +34,7 @@ beforeEach(async () => {
   // 1: search visitor who buys
   await visit("a", CHROME, base, [pv("/", 0, "https://www.google.com/"), pv("/product/kenya", 20), ev("add_to_cart", 30, { p: { item: "Kenya" } }), pv("/checkout", 40), ev("purchase", 60, { rev: 42, p: { item: "Kenya" } })]);
   // 2: email visitor who adds to cart and leaves
-  await visit("b", IPHONE, base + 3600_000, [pv("/product/kenya?utm_source=newsletter&utm_medium=email&utm_campaign=oct", 0), ev("add_to_cart", 15, { p: { item: "Kenya" } })]);
+  await visit("b", IPHONE, base + 3600_000, [pv("/product/kenya?utm_source=newsletter&utm_medium=email&utm_campaign=oct", 0), ev("add_to_cart", 15, { p: { item: "Kenya" } }), ev("add_to_cart", 20, { p: { item: "Colombia" } })]);
   // 3: direct bounce
   await visit("c", CHROME, base + 7200_000, [pv("/", 0), { t: "page_leave", u: "https://t.example/", v: 3000, p: { sd: 20 }, at: 3 }]);
   // 4: visitor "a" returns a week later (same client id)
@@ -109,7 +109,11 @@ describe("reports", () => {
     const e = await ecommerce(await ctx());
     expect(e).toMatchObject({ revenue: 42, orders: 1, aov: 42 });
     expect(e.cartAbandonment).toBe(0.5);
-    expect(e.products[0]).toMatchObject({ value: "Kenya", added: 2, purchased: 1 });
+    // One row per product: grouping by the alias "value" would pick up events.value and merge them all.
+    expect(e.products).toEqual([
+      { value: "Kenya", added: 2, purchased: 1, revenue: 42 },
+      { value: "Colombia", added: 1, purchased: 0, revenue: 0 },
+    ]);
   });
 
   it("cohorts recognise the returning visitor", async () => {
