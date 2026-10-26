@@ -180,6 +180,11 @@ tests/                   vitest suites
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately as described in
 [SECURITY.md](SECURITY.md).
 
+## Support
+
+Optic is free and open source. If it saves you time or money, you can **buy me a coffee** ☕ over UPI
+(Google Pay, PhonePe, Paytm, BHIM) at **+91 8941951465**. Starring the repository helps too.
+
 ## License
 
 [MIT](LICENSE) © 2026 Aman Jha. Use it for anything, commercial or not; just keep the copyright notice.
